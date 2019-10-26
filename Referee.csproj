@@ -13,7 +13,7 @@
   
   <ItemGroup>
     <Protobuf Include="FIRAMessage/REF2CLI/*.proto" ProtoRoot="FIRAMessage/REF2CLI" />
-    <Protobuf Include="FIRAMessage/SIM2REF/*.proto" ProtoRoot="FIRAMessage/SIM2REF"/>
+    <Protobuf Include="FIRAMessage/SIM2REF/*.proto" ProtoRoot="FIRAMessage/SIM2REF" />
   </ItemGroup>
 
 </Project>
