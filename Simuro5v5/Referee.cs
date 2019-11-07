@@ -1085,14 +1085,14 @@ namespace Referee.Simuro5v5
             public bool occupy;
             public Square square;
 
-            public RobotPosSquare(Vector2D pos, float angle = 0)
+            public RobotPosSquare(Vector2D pos, double angle = 0)
             {
                 Pos = pos;
                 occupy = false;
                 square = new Square(Pos, angle);
             }
 
-            public void GetNewPosSquare(Vector2D pos, float angle = 0)
+            public void GetNewPosSquare(Vector2D pos, double angle = 0)
             {
                 Pos = pos;
                 occupy = false;

@@ -8,7 +8,7 @@ namespace Referee.Simuro5v5
 
         //争球十秒的拍数
         private readonly int Capacity = 10 * Const.FramePerSecond;
-        private float LimitMove = (float) 1.5 * Const.Robot.RL;
+        private double LimitMove = 1.5 * Const.Robot.RL;
 
         Vector2D[] testpos;
 

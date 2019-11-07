@@ -97,17 +97,17 @@ namespace Referee.Simuro5v5
 
     public class UprightRectangle : RectangleBase
     {
-        private float LeftX { get; }
-        private float RightX { get; }
-        private float TopY { get; }
-        private float BotY { get; }
+        private double LeftX { get; }
+        private double RightX { get; }
+        private double TopY { get; }
+        private double BotY { get; }
 
         public override Vector2D Point1 => new Vector2D(LeftX, TopY);
         public override Vector2D Point2 => new Vector2D(RightX, BotY);
         public override Vector2D Point3 => new Vector2D(RightX, TopY);
         public override Vector2D Point4 => new Vector2D(LeftX, BotY);
 
-        public UprightRectangle(float leftX, float rightX, float topY, float botY)
+        public UprightRectangle(double leftX, double rightX, double topY, double botY)
         {
             LeftX = leftX;
             TopY = topY;
@@ -120,7 +120,7 @@ namespace Referee.Simuro5v5
             return point.x < RightX && point.x > LeftX && point.y > BotY && point.y < TopY;
         }
 
-        public bool ContainsCircle(Vector2D point, float radius)
+        public bool ContainsCircle(Vector2D point, double radius)
         {
             return new UprightRectangle(LeftX + radius,
                                         RightX - radius,
@@ -143,9 +143,9 @@ namespace Referee.Simuro5v5
         /// <summary>
         /// 通过机器人中心与半径以及角度来构造机器人正方形
         /// </summary>
-        public Square(Vector2D robotPosition, float angleInDegree = 0, float hrl = 3.9341f)
+        public Square(Vector2D robotPosition, double angleInDegree = 0, double hrl = 3.9341f)
         {
-            float robotRadius = (float)(hrl * Math.Sqrt(2));
+            double robotRadius = hrl * Math.Sqrt(2);
             
             //角度规整
             while (angleInDegree > 45)
@@ -158,10 +158,10 @@ namespace Referee.Simuro5v5
             }
             angleInDegree += 45;
             
-            float point1X = (float)(robotPosition.x + robotRadius * Math.Cos(angleInDegree * Math.PI / 180));
-            float point1Y = (float)(robotPosition.y + robotRadius * Math.Sin(angleInDegree * Math.PI / 180));
-            float point2X = (float)(robotPosition.x - robotRadius * Math.Cos(angleInDegree * Math.PI / 180));
-            float point2Y = (float)(robotPosition.y - robotRadius * Math.Sin(angleInDegree * Math.PI / 180));
+            double point1X = robotPosition.x + robotRadius * Math.Cos(angleInDegree * Math.PI / 180);
+            double point1Y = robotPosition.y + robotRadius * Math.Sin(angleInDegree * Math.PI / 180);
+            double point2X = robotPosition.x - robotRadius * Math.Cos(angleInDegree * Math.PI / 180);
+            double point2Y = robotPosition.y - robotRadius * Math.Sin(angleInDegree * Math.PI / 180);
             Point1 = new Vector2D(point1X, point1Y);
             Point2 = new Vector2D(point2X, point2Y);
         }
@@ -175,10 +175,10 @@ namespace Referee.Simuro5v5
         /// </summary>
         public override Vector2D Point2 { get; }
 
-        public override Vector2D Point3 => (Point1 - Midpoint).Rotate((float)Math.PI / 2)
+        public override Vector2D Point3 => (Point1 - Midpoint).Rotate(Math.PI / 2)
                                   + Midpoint;
 
-        public override Vector2D Point4 => (Point1 - Midpoint).Rotate((float)-Math.PI / 2)
+        public override Vector2D Point4 => (Point1 - Midpoint).Rotate(-Math.PI / 2)
                                   + Midpoint;
 
         /// <summary>
@@ -186,7 +186,7 @@ namespace Referee.Simuro5v5
         /// <br />
         /// TODO: 这个实现是不完整的
         /// </summary>
-        public bool OverlapWithCircle(Vector2D center, float radius = Const.Ball.HBL)
+        public bool OverlapWithCircle(Vector2D center, double radius = Const.Ball.HBL)
         {
             foreach (var point in new[] {Point1, Point2, Point3, Point4})
             {
@@ -206,8 +206,8 @@ namespace Referee.Simuro5v5
         /// <returns></returns>
         public bool IsInRectangle(UprightRectangle area)
         {   //TODO如果球员有大于零且小于二分之一区域在矩形内，判定结果为不在区域里，应该判断在区域里
-            float width = Vector2D.Distance(Point1, Point3);
-            float outer = Math.Max(
+            double width = Vector2D.Distance(Point1, Point3);
+            double outer = Math.Max(
                 Vector2D.Distance(area.Point1, area.Point3),
                 Vector2D.Distance(area.Point1, area.Point4));
             return area.ContainsPoint(Midpoint) && !IsCrossedBy(area) && width < outer;

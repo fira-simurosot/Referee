@@ -105,13 +105,13 @@ namespace Referee.Simuro5v5
             //x, y, rotation
             var yellowData = new[,]
             {
-                {-102.5f, 0, 90}, {-81.2f, 48, 0}, {-81.2f, -48, 0}, {-29.8f, 48, 0}, {-29.8f, -48, 0}
+                {-102.5d, 0, 90}, {-81.2d, 48, 0}, {-81.2d, -48, 0}, {-29.8d, 48, 0}, {-29.8d, -48, 0}
             };
             var blueData = new[,]
             {
-                {102.5f, 0, -90}, {81.2f, -48, 180}, {81.2f, 48, 180}, {29.8f, -48, 180}, {29.8f, 48, 180}
+                {102.5d, 0, -90}, {81.2d, -48, 180}, {81.2d, 48, 180}, {29.8d, -48, 180}, {29.8d, 48, 180}
             };
-            Robot InitRobot(Robot rb, float[,] data, int elem)
+            Robot InitRobot(Robot rb, double[,] data, int elem)
             {
                 rb.pos.x = data[elem, 0];
                 rb.pos.y = data[elem, 1];
@@ -120,7 +120,7 @@ namespace Referee.Simuro5v5
                 rb.linearVelocity = Vector2D.Zero;
                 return rb;
             }
-            Robot[] InitMe(IEnumerable<Robot> rbs, float[,] data)
+            Robot[] InitMe(IEnumerable<Robot> rbs, double[,] data)
             {
                 return rbs.Select((rb, i) => InitRobot(rb, data, i)).ToArray();
             }
@@ -230,8 +230,8 @@ namespace Referee.Simuro5v5
 
         public void ConvertToAnotherSide()
         {
-            float ht = Const.Field.Right + Const.Field.Left;
-            float vt = Const.Field.Bottom + Const.Field.Top;
+            double ht = Const.Field.Right + Const.Field.Left;
+            double vt = Const.Field.Bottom + Const.Field.Top;
 
             currentBall.pos.x = ht - currentBall.pos.x;
             currentBall.pos.y = vt - currentBall.pos.y;
@@ -300,8 +300,8 @@ namespace Referee.Simuro5v5
 
         public void ConvertToAnotherSide()
         {
-            float ht = Const.Field.Right + Const.Field.Left;
-            float vt = Const.Field.Bottom + Const.Field.Top;
+            double ht = Const.Field.Right + Const.Field.Left;
+            double vt = Const.Field.Bottom + Const.Field.Top;
 
             Ball.pos.x = ht - Ball.pos.x;
             Ball.pos.y = vt - Ball.pos.y;
@@ -341,18 +341,18 @@ namespace Referee.Simuro5v5
     
     public struct Vector2D
     {
-        public float x;
-        public float y;
+        public double x;
+        public double y;
 
         public static Vector2D Zero => new Vector2D();
         
-        public Vector2D(float x , float y)
+        public Vector2D(double x , double y)
         {
             this.x = x;
             this.y = y;
         }
         
-        public void ClampToRect(float right, float left, float top, float bottom)
+        public void ClampToRect(double right, double left, double top, double bottom)
         {
             // normalize to the specified box
             if (x < left)
@@ -394,7 +394,7 @@ namespace Referee.Simuro5v5
             return lhs + (-rhs);
         }
 
-        public static float operator *(Vector2D lhs, Vector2D rhs)
+        public static double operator *(Vector2D lhs, Vector2D rhs)
         {
             return lhs.x * rhs.x + lhs.y * rhs.y;
         }
@@ -409,12 +409,12 @@ namespace Referee.Simuro5v5
             return false;
         }
 
-        public static Vector2D operator /(Vector2D vec, float v)
+        public static Vector2D operator /(Vector2D vec, double v)
         {
             return new Vector2D(vec.x / v, vec.y / v);
         }
 
-        public float Cross(Vector2D rhs)
+        public double Cross(Vector2D rhs)
         {
             return x * rhs.y - y * rhs.x;
         }
@@ -427,9 +427,9 @@ namespace Referee.Simuro5v5
                 return false;
         }
 
-        public static float Distance (Vector2D lhs, Vector2D rhs)
+        public static double Distance (Vector2D lhs, Vector2D rhs)
         {
-            return (float)Math.Sqrt(Math.Pow(lhs.x - rhs.x, 2) + Math.Pow(lhs.y - rhs.y, 2));
+            return (double)Math.Sqrt(Math.Pow(lhs.x - rhs.x, 2) + Math.Pow(lhs.y - rhs.y, 2));
         }
         
         /// <summary>
@@ -437,19 +437,19 @@ namespace Referee.Simuro5v5
         /// </summary>
         /// <param name="angle">逆时针旋转角，采用弧度制</param>
         /// <returns></returns>
-        public Vector2D Rotate(float angle)
+        public Vector2D Rotate(double angle)
         {
             return new Vector2D(
-                (float)(x * Math.Cos(angle) - y * Math.Sin(angle)),
-                (float)(x * Math.Sin(angle) + y * Math.Cos(angle)));
+                (double)(x * Math.Cos(angle) - y * Math.Sin(angle)),
+                (double)(x * Math.Sin(angle) + y * Math.Cos(angle)));
         }
     }
 
     [Serializable]
     public struct Wheel
     {
-        public float left;
-        public float right;
+        public double left;
+        public double right;
 
         public void Normalize()
         {
@@ -475,14 +475,14 @@ namespace Referee.Simuro5v5
 
     public struct Robot
     {
-        public float mass;
+        public double mass;
         public Vector2D pos;
-        public float rotation;
+        public double rotation;
         public Wheel wheel;
         public Vector2D linearVelocity;
-        public float angularVelocity;
+        public double angularVelocity;
 
-        public void Normalize(float right, float left, float top, float bottom)
+        public void Normalize(double right, double left, double top, double bottom)
         {
             pos.ClampToRect(right, left, top, bottom);
             wheel.Normalize();
@@ -506,7 +506,7 @@ namespace Referee.Simuro5v5
     public struct OpponentRobot
     {
         public Vector2D pos;
-        public float rotation;
+        public double rotation;
     }
 
     public struct Ball
@@ -518,12 +518,12 @@ namespace Referee.Simuro5v5
             None,
         }
 
-        public float mass;
+        public double mass;
         public Vector2D pos;
         public Vector2D linearVelocity;
-        public float angularVelocity;
+        public double angularVelocity;
 
-        public void moveTo(float x, float y)
+        public void moveTo(double x, double y)
         {
             pos.x = x;
             pos.y = y;
@@ -545,7 +545,7 @@ namespace Referee.Simuro5v5
             }
         }
 
-        public void Normalize(float right, float left, float top, float bottom)
+        public void Normalize(double right, double left, double top, double bottom)
         {
             pos.ClampToRect(right, left, top, bottom);
         }
