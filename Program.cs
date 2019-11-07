@@ -1,5 +1,5 @@
 ﻿using System;
-using FiraSim.Referee.Proto.SimToRef;
+using FiraMessage.SimToRef;
 using Grpc.Core;
 using Referee.Simuro5v5;
 
@@ -24,9 +24,10 @@ namespace Referee
                         new Command { Id = 1, Yellowteam = false, WheelLeft = 0, WheelRight = 125 },
                         new Command { Id = 2, Yellowteam = true, WheelLeft = 0, WheelRight = 125 },
                     }
-                }
+                },
+                Replace = new Replacement()
             };
-            var reply = client.simulate(packet);
+            var reply = client.Simulate(packet);
 
             channel.ShutdownAsync().Wait();
         }
