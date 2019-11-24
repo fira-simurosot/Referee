@@ -27,6 +27,7 @@ namespace Referee
             var yellowClient = new FiraMessage.RefToCli.Referee.RefereeClient(yellowchannel);
 
             int matchstep = 0;
+            int blueScore = 0, yellowScore = 0;
             FoulInfo.Types.PhaseType matchstate = FoulInfo.Types.PhaseType.FirstHalf;
             FoulInfo.Types.PhaseType matchstatelast = matchstate;
             FiraMessage.SimToRef.Environment replySimulate = new FiraMessage.SimToRef.Environment();
@@ -41,9 +42,36 @@ namespace Referee
                 var matchinfo = SimEnvironment2MatchInfo(replySimulate);
                 var judgeResult = matchinfo.Referee.Judge(matchinfo);
                 FoulInfo info = RefereeState(judgeResult, ref matchstate);
+                blueScore += matchinfo.Score.BlueScore;
+                yellowScore += matchinfo.Score.YellowScore;
 
+                if (matchstate == FoulInfo.Types.PhaseType.PenaltyShootout && blueScore != yellowScore)
+                    break;
+                
                 if (matchstate != matchstatelast)
                 {
+                    bool flagMatchOver = false;
+                    switch (matchstate)
+                    {
+                        case FoulInfo.Types.PhaseType.FirstHalf:
+                        case FoulInfo.Types.PhaseType.SecondHalf:
+                            break;
+                        case FoulInfo.Types.PhaseType.Overtime:
+                        case FoulInfo.Types.PhaseType.PenaltyShootout:
+                            if (blueScore != yellowScore)
+                            {
+                                flagMatchOver = true;
+                            }
+                            break;
+                        case FoulInfo.Types.PhaseType.Stopped:
+                            flagMatchOver = true;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                    
+                    if (flagMatchOver)
+                        break;
                     matchstep = 0;
                     matchstatelast = matchstate;
                     continue;
@@ -176,10 +204,6 @@ namespace Referee
                 if (judgeResult.ResultType == ResultType.NormalMatch)
                 {
                     info.Phase = matchstate;
-                }
-                else
-                {
-                    info.Phase = FoulInfo.Types.PhaseType.Stopped;
                 }
             }
 
