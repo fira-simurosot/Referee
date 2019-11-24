@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Linq;
+using FiraMessage;
 using FiraMessage.SimToRef;
 using FiraMessage.RefToCli;
+using Google.Protobuf.Collections;
 using Grpc.Core;
 using Referee.Simuro5v5;
+using Ball = Referee.Simuro5v5.Ball;
+using Robot = Referee.Simuro5v5.Robot;
 using Side = FiraMessage.RefToCli.Side;
 
 //using 
@@ -18,92 +22,36 @@ namespace Referee
             Channel channel = new Channel("127.0.0.1:50051", ChannelCredentials.Insecure);
             var bluechannel = channel;
             var yellowchannel = channel;
-
             var clientSimulate = new Simulate.SimulateClient(channel);
             var blueClient = new FiraMessage.RefToCli.Referee.RefereeClient(bluechannel);
             var yellowClient = new FiraMessage.RefToCli.Referee.RefereeClient(yellowchannel);
 
-            var replySimulate = clientSimulate.Simulate(new Packet());
+            int matchstep = 0;
             FoulInfo.Types.PhaseType matchstate = FoulInfo.Types.PhaseType.FirstHalf;
-
-            //TODO: Robot positioning information at the beginning of the game?
-            {
-                FoulInfo info = new FoulInfo
-                {
-                    Actor = Side.Self,
-                    Phase = FoulInfo.Types.PhaseType.FirstHalf,
-                    Type = FoulInfo.Types.FoulType.PlaceKick
-                };
-                var sendClient = SimEnvironment2CliEnvironment(replySimulate, info);
-                var replyClientBall = blueClient.SetBall(sendClient);
-                UpdateCliEnvironment(sendClient, replyClientBall);
-                var replyblueClientRobots = blueClient.SetFormerRobots(sendClient);
-                sendClient.FoulInfo.Actor = Side.Opponent;
-                UpdateCliEnvironment(sendClient, replyblueClientRobots, false);
-                var replyyellowClientRobots = yellowClient.SetLaterRobots(sendClient);
-                UpdateCliEnvironment(sendClient, replyyellowClientRobots, true);
-
-                var matchinfo2 = CliEnvironment2MatchInfo(sendClient);
-                //var matchinfo2 = All32MatchInfo(replyClientBall, replyblueClientRobots, replyyellowClientRobots);
-
-                JudgeResult judgeResult = new JudgeResult
-                {
-                    ResultType = ResultType.NormalMatch,
-                    Actor = Simuro5v5.Side.Blue
-                };
-                matchinfo2.Referee.JudgeAutoPlacement(matchinfo2, judgeResult, judgeResult.Actor);
-                replySimulate = clientSimulate.Simulate(MatchInfo2Packet(matchinfo2));
-            }
-
+            FoulInfo.Types.PhaseType matchstatelast = matchstate;
+            FiraMessage.SimToRef.Environment replySimulate = new FiraMessage.SimToRef.Environment();
             while (true)
             {
+                if (matchstep == 0)
+                {
+                    replySimulate = MatchStart(clientSimulate, blueClient, yellowClient, matchstate);
+                    matchstep++;
+                }
+
                 var matchinfo = SimEnvironment2MatchInfo(replySimulate);
                 var judgeResult = matchinfo.Referee.Judge(matchinfo);
+                FoulInfo info = RefereeState(judgeResult, ref matchstate);
 
-                FoulInfo info = new FoulInfo();
-                if (judgeResult.ResultType == ResultType.NextPhase)
+                if (matchstate != matchstatelast)
                 {
-                    info.Phase = matchstate switch
-                    {
-                        FoulInfo.Types.PhaseType.FirstHalf => FoulInfo.Types.PhaseType.SecondHalf,
-                        FoulInfo.Types.PhaseType.SecondHalf => FoulInfo.Types.PhaseType.Overtime,
-                        FoulInfo.Types.PhaseType.Overtime => FoulInfo.Types.PhaseType.PenaltyShootout,
-                        FoulInfo.Types.PhaseType.PenaltyShootout => FoulInfo.Types.PhaseType.Stopped,
-                        FoulInfo.Types.PhaseType.Stopped => FoulInfo.Types.PhaseType.Stopped,
-                        _ => throw new ArgumentOutOfRangeException()
-                    };
-                    matchstate = info.Phase;
+                    matchstep = 0;
+                    matchstatelast = matchstate;
+                    continue;
                 }
-                else
-                {
-                    if (judgeResult.ResultType == ResultType.NormalMatch)
-                    {
-                        info.Phase = matchstate;
-                    }
-                    else
-                    {
-                        info.Phase = FoulInfo.Types.PhaseType.Stopped;
-                    }
-                }
-
-                info.Type = judgeResult.ResultType switch
-                {
-                    ResultType.NormalMatch => FoulInfo.Types.FoulType.PlayOn,
-                    ResultType.NextPhase => FoulInfo.Types.FoulType.PlayOn,
-                    ResultType.GameOver => FoulInfo.Types.FoulType.PlayOn,
-                    ResultType.PlaceKick => FoulInfo.Types.FoulType.PlaceKick,
-                    ResultType.GoalKick => FoulInfo.Types.FoulType.GoalKick,
-                    ResultType.PenaltyKick => FoulInfo.Types.FoulType.PenaltyKick,
-                    ResultType.FreeKickRightTop => FoulInfo.Types.FoulType.FreeBallRightTop,
-                    ResultType.FreeKickRightBot => FoulInfo.Types.FoulType.FreeBallRightBot,
-                    ResultType.FreeKickLeftTop => FoulInfo.Types.FoulType.FreeBallLeftTop,
-                    ResultType.FreeKickLeftBot => FoulInfo.Types.FoulType.FreeBallLeftBot,
-                    _ => throw new ArgumentOutOfRangeException()
-                };
+                matchstatelast = matchstate;
 
                 if (info.Type == FoulInfo.Types.FoulType.PlayOn)
                 {
-                    info.Actor = Side.Self;
                     var replyblueClientCommand =
                         blueClient.RunStrategy(SimEnvironment2CliEnvironment(replySimulate, info));
                     var replyyellowClientCommand =
@@ -113,44 +61,204 @@ namespace Referee
                 }
                 else
                 {
-                    info.Actor = Side.Self;
                     var sendClient = SimEnvironment2CliEnvironment(replySimulate, info);
-                    FiraMessage.Ball replyClientBall = new FiraMessage.Ball();
-                    Robots replyblueClientRobots = new Robots();
-                    Robots replyyellowClientRobots = new Robots();
-                    if (judgeResult.Actor == Simuro5v5.Side.Blue)
+
+                    FiraMessage.Ball replyClientBall = FoulBallPosition(info, judgeResult);
+                    Robots replyblueClientRobots;
+                    Robots replyyellowClientRobots;
+
+                    if (judgeResult.WhoisFirst == Simuro5v5.Side.Blue)
                     {
-                        replyClientBall = blueClient.SetBall(sendClient);
-                        UpdateCliEnvironment(sendClient, replyClientBall);
+                        if (info.Type == FoulInfo.Types.FoulType.GoalKick)
+                        {
+                            replyClientBall = blueClient.SetBall(sendClient);
+                        }
+
+                        UpdateCliEnvironment(ref sendClient, replyClientBall);
                         replyblueClientRobots = blueClient.SetFormerRobots(sendClient);
                         sendClient.FoulInfo.Actor = Side.Opponent;
-                        UpdateCliEnvironment(sendClient, replyblueClientRobots, false);
+                        UpdateCliEnvironment(ref sendClient, replyblueClientRobots, false);
                         replyyellowClientRobots = yellowClient.SetLaterRobots(sendClient);
-                        UpdateCliEnvironment(sendClient, replyyellowClientRobots, true);
+                        UpdateCliEnvironment(ref sendClient, replyyellowClientRobots, true);
                     }
-                    else if (judgeResult.Actor == Simuro5v5.Side.Yellow)
+                    else if (judgeResult.WhoisFirst == Simuro5v5.Side.Yellow)
                     {
-                        replyClientBall = yellowClient.SetBall(sendClient);
-                        UpdateCliEnvironment(sendClient, replyClientBall);
+                        if (info.Type == FoulInfo.Types.FoulType.GoalKick)
+                        {
+                            replyClientBall = yellowClient.SetBall(sendClient);
+                        }
+
+                        UpdateCliEnvironment(ref sendClient, replyClientBall);
                         replyyellowClientRobots = yellowClient.SetFormerRobots(sendClient);
                         sendClient.FoulInfo.Actor = Side.Opponent;
-                        UpdateCliEnvironment(sendClient, replyyellowClientRobots, true);
+                        UpdateCliEnvironment(ref sendClient, replyyellowClientRobots, true);
                         replyblueClientRobots = blueClient.SetLaterRobots(sendClient);
-                        UpdateCliEnvironment(sendClient, replyblueClientRobots, false);
+                        UpdateCliEnvironment(ref sendClient, replyblueClientRobots, false);
                     }
 
                     //Here are two conversion schemes.
-                    //var matchinfo2 = CliEnvironment2MatchInfo(sendClient);
-                    var matchinfo2 = All32MatchInfo(replyClientBall, replyblueClientRobots, replyyellowClientRobots);
+                    var matchinfo2 = CliEnvironment2MatchInfo(sendClient);
+                    //var matchinfo2 = All32MatchInfo(replyClientBall, replyblueClientRobots, replyyellowClientRobots);
 
                     matchinfo2.Referee.JudgeAutoPlacement(matchinfo2, judgeResult, judgeResult.Actor);
                     replySimulate = clientSimulate.Simulate(MatchInfo2Packet(matchinfo2));
                 }
+
+                matchstep++;
             }
 
             bluechannel.ShutdownAsync().Wait();
             yellowchannel.ShutdownAsync().Wait();
             channel.ShutdownAsync().Wait();
+        }
+
+        private static FiraMessage.SimToRef.Environment MatchStart(
+            Simulate.SimulateClient clientSimulate,
+            FiraMessage.RefToCli.Referee.RefereeClient blueClient,
+            FiraMessage.RefToCli.Referee.RefereeClient yellowClient,
+            FoulInfo.Types.PhaseType matchstate)
+        {
+            FiraMessage.RefToCli.Environment sendClient = new FiraMessage.RefToCli.Environment
+            {
+                Frame = new Frame
+                {
+                    Ball = new FiraMessage.Ball
+                    {
+                        X = Const.PlaceKickX,
+                        Y = Const.PlaceKickY,
+                        Z = 0.0
+                    }
+                },
+                FoulInfo = new FoulInfo
+                {
+                    Actor = Side.Self,
+                    Phase = matchstate,
+                    Type = FoulInfo.Types.FoulType.PlaceKick
+                }
+            };
+            var replyblueClientRobots = blueClient.SetFormerRobots(sendClient);
+            UpdateCliEnvironment(ref sendClient, replyblueClientRobots, false);
+            sendClient.FoulInfo.Actor = Side.Opponent;
+            var replyyellowClientRobots = yellowClient.SetLaterRobots(sendClient);
+            UpdateCliEnvironment(ref sendClient, replyyellowClientRobots, true);
+
+            var matchinfo = CliEnvironment2MatchInfo(sendClient);
+            var judgeResult = new JudgeResult
+            {
+                ResultType = ResultType.PlaceKick,
+                Actor = Simuro5v5.Side.Blue,
+                Reason = "",
+                WhoGoal = Simuro5v5.Side.Nobody
+            };
+            matchinfo.Referee.JudgeAutoPlacement(matchinfo, judgeResult, judgeResult.Actor);
+            return clientSimulate.Simulate(MatchInfo2Packet(matchinfo));
+        }
+
+        private static FoulInfo RefereeState(JudgeResult judgeResult, ref FoulInfo.Types.PhaseType matchstate)
+        {
+            FoulInfo info = new FoulInfo();
+            info.Actor = Side.Self;
+            if (judgeResult.ResultType == ResultType.NextPhase)
+            {
+                info.Phase = matchstate switch
+                {
+                    FoulInfo.Types.PhaseType.FirstHalf => FoulInfo.Types.PhaseType.SecondHalf,
+                    FoulInfo.Types.PhaseType.SecondHalf => FoulInfo.Types.PhaseType.Overtime,
+                    FoulInfo.Types.PhaseType.Overtime => FoulInfo.Types.PhaseType.PenaltyShootout,
+                    FoulInfo.Types.PhaseType.PenaltyShootout => FoulInfo.Types.PhaseType.Stopped,
+                    FoulInfo.Types.PhaseType.Stopped => FoulInfo.Types.PhaseType.Stopped,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+                matchstate = info.Phase;
+            }
+            else
+            {
+                if (judgeResult.ResultType == ResultType.NormalMatch)
+                {
+                    info.Phase = matchstate;
+                }
+                else
+                {
+                    info.Phase = FoulInfo.Types.PhaseType.Stopped;
+                }
+            }
+
+            info.Type = judgeResult.ResultType switch
+            {
+                ResultType.NormalMatch => FoulInfo.Types.FoulType.PlayOn,
+                ResultType.NextPhase => FoulInfo.Types.FoulType.PlayOn,
+                ResultType.GameOver => FoulInfo.Types.FoulType.PlayOn,
+                ResultType.PlaceKick => FoulInfo.Types.FoulType.PlaceKick,
+                ResultType.GoalKick => FoulInfo.Types.FoulType.GoalKick,
+                ResultType.PenaltyKick => FoulInfo.Types.FoulType.PenaltyKick,
+                ResultType.FreeKickRightTop => FoulInfo.Types.FoulType.FreeBallRightTop,
+                ResultType.FreeKickRightBot => FoulInfo.Types.FoulType.FreeBallRightBot,
+                ResultType.FreeKickLeftTop => FoulInfo.Types.FoulType.FreeBallLeftTop,
+                ResultType.FreeKickLeftBot => FoulInfo.Types.FoulType.FreeBallLeftBot,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+
+            return info;
+        }
+
+        private static FiraMessage.Ball FoulBallPosition(FoulInfo info, JudgeResult judgeResult)
+        {
+            FiraMessage.Ball replyClientBall = new FiraMessage.Ball();
+            switch (info.Type)
+            {
+                case FoulInfo.Types.FoulType.PlayOn:
+                    break;
+                case FoulInfo.Types.FoulType.PlaceKick:
+                    replyClientBall.X = Const.PlaceKickX;
+                    replyClientBall.Y = Const.PlaceKickY;
+                    break;
+                case FoulInfo.Types.FoulType.PenaltyKick:
+                    if (judgeResult.WhoisFirst == Simuro5v5.Side.Blue)
+                    {
+                        replyClientBall.X = Const.PenaltyKickRightX;
+                        replyClientBall.Y = Const.PenaltyKickRightY;
+                    }
+                    else if (judgeResult.WhoisFirst == Simuro5v5.Side.Yellow)
+                    {
+                        replyClientBall.X = Const.PenaltyKickLeftX;
+                        replyClientBall.Y = Const.PenaltyKickLeftY;
+                    }
+
+                    break;
+                case FoulInfo.Types.FoulType.FreeKick:
+                    break;
+                case FoulInfo.Types.FoulType.GoalKick:
+                    break;
+                case FoulInfo.Types.FoulType.FreeBallLeftTop:
+                    replyClientBall.X = Const.FreeBallLeftTopX;
+                    replyClientBall.Y = Const.FreeBallLeftTopY;
+                    break;
+                case FoulInfo.Types.FoulType.FreeBallRightTop:
+                    replyClientBall.X = Const.FreeBallRightTopX;
+                    replyClientBall.Y = Const.FreeBallRightTopY;
+                    break;
+                case FoulInfo.Types.FoulType.FreeBallLeftBot:
+                    replyClientBall.X = Const.FreeBallLeftBotX;
+                    replyClientBall.Y = Const.FreeBallLeftBotY;
+                    break;
+                case FoulInfo.Types.FoulType.FreeBallRightBot:
+                    replyClientBall.X = Const.FreeBallRightBotX;
+                    replyClientBall.Y = Const.FreeBallRightBotY;
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            return replyClientBall;
+        }
+
+        private static FiraMessage.SimToRef.Environment MatchNormal(
+            Simulate.SimulateClient clientSimulate,
+            FiraMessage.RefToCli.Referee.RefereeClient blueClient,
+            FiraMessage.RefToCli.Referee.RefereeClient yellowClient)
+        {
+            return new FiraMessage.SimToRef.Environment();
         }
 
         //TODO: We don't use FiraMessage.SimToRef.Environment.Field. We don't know how to use this var. Field should be const. 
@@ -255,12 +363,13 @@ namespace Referee
             };
         }
 
-        private static void UpdateCliEnvironment(FiraMessage.RefToCli.Environment cliEnvironment, FiraMessage.Ball ball)
+        private static void UpdateCliEnvironment(ref FiraMessage.RefToCli.Environment cliEnvironment,
+            FiraMessage.Ball ball)
         {
             cliEnvironment.Frame.Ball = ball;
         }
 
-        private static void UpdateCliEnvironment(FiraMessage.RefToCli.Environment cliEnvironment, Robots robots,
+        private static void UpdateCliEnvironment(ref FiraMessage.RefToCli.Environment cliEnvironment, Robots robots,
             bool isyellow)
         {
             switch (isyellow)

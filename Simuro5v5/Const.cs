@@ -3,6 +3,21 @@ namespace Referee.Simuro5v5
 {
     static class Const
     {
+        public const double PlaceKickX = 0.0;
+        public const double PlaceKickY = 0.0;
+        public const double PenaltyKickRightX = 72.5;
+        public const double PenaltyKickRightY = 0.0;
+        public const double PenaltyKickLeftX = -72.5;
+        public const double PenaltyKickLeftY = 0.0;
+        public const double FreeBallRightTopX = 55.0;
+        public const double FreeBallRightTopY = 60.0;
+        public const double FreeBallRightBotX = 55.0;
+        public const double FreeBallRightBotY = -60.0;
+        public const double FreeBallLeftTopX = -55.0;
+        public const double FreeBallLeftTopY = 60.0;
+        public const double FreeBallLeftBotX = -55.0;
+        public const double FreeBallLeftBotY = -60.0;
+
         public readonly static int RobotsPerTeam = 5;
         public readonly static int MaxWheelVelocity = 125;
         public readonly static int MinWheelVelocity = -125;
