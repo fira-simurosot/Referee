@@ -321,7 +321,6 @@ namespace Referee.Simuro5v5
         }
     }
 
-    [Serializable]
     public class WheelInfo
     {
         public Wheel[] Wheels = new Wheel[Const.RobotsPerTeam];
@@ -336,8 +335,6 @@ namespace Referee.Simuro5v5
             }
         }
     }
-    
-    
     
     public struct Vector2D
     {
@@ -444,8 +441,7 @@ namespace Referee.Simuro5v5
                 (double)(x * Math.Sin(angle) + y * Math.Cos(angle)));
         }
     }
-
-    [Serializable]
+    
     public struct Wheel
     {
         public double left;

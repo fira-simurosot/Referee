@@ -886,63 +886,6 @@ namespace Referee.Simuro5v5
             }
 
             return false;
-            //if (matchInfo.Ball.linearVelocity.GetUnityVector2().magnitude < 50)
-            //{
-            //    standoffTime++;
-            //    if (standoffTime > maxStandoffTime)
-            //    {
-            //        standoffTime = 0;
-            //        if (matchInfo.Ball.pos.x > 0 && matchInfo.Ball.pos.y > 0)
-            //        {
-            //            judgeResult = new JudgeResult
-            //            {
-            //                ResultType = ResultType.FreeKickRightTop,
-            //                Actor = Side.Blue,
-            //                Reason = "RightTop Standoff time longer than 10 seconds in game"
-            //            };
-            //            return true;
-            //        }
-            //        else if (matchInfo.Ball.pos.x > 0 && matchInfo.Ball.pos.y < 0)
-            //        {
-            //            judgeResult = new JudgeResult
-            //            {
-            //                ResultType = ResultType.FreeKickRightBot,
-            //                Actor = Side.Blue,
-            //                Reason = "RightBot Standoff time longer than 10 seconds in game"
-            //            };
-            //            return true;
-            //        }
-            //        else if (matchInfo.Ball.pos.x < 0 && matchInfo.Ball.pos.y > 0)
-            //        {
-            //            judgeResult = new JudgeResult
-            //            {
-            //                ResultType = ResultType.FreeKickLeftTop,
-            //                Actor = Side.Yellow,
-            //                Reason = "LeftTop Standoff time longer than 10 seconds in game"
-            //            };
-            //            return true;
-            //        }
-            //        else
-            //        {
-            //            judgeResult = new JudgeResult
-            //            {
-            //                ResultType = ResultType.FreeKickLeftBot,
-            //                Actor = Side.Yellow,
-            //                Reason = "LeftBot Standoff time longer than 10 seconds in game"
-            //            };
-            //            return true;
-            //        }
-            //    }
-            //    else
-            //    {
-            //        return false;
-            //    }
-            //}
-            //else
-            //{
-            //    standoffTime = 0;
-            //    return false;
-            //}
         }
 
         private bool JudgeHalfOrGameEnd(ref JudgeResult judgeResult)
@@ -1046,29 +989,7 @@ namespace Referee.Simuro5v5
 
             return false;
         }
-
-        /// <summary>
-        /// whether Object1 collide Object2
-        /// </summary>
-        /// <param name="object1"></param>
-        /// <param name="object2"></param>
-        /// <returns></returns>
-        /*[Obsolete("Use JudgeCollision2")]
-        private bool JudgeCollision(GameObject object1, GameObject object2)
-        {
-            List<GameObject> touchObject = object1.GetComponent<BoxColliderEvent>().TouchObject;
-            if (touchObject.IndexOf(object2) == -1)
-            {
-                //touchObject.Clear();
-                return false;
-            }
-            else
-            {
-                //touchObject.Clear();
-                return true;
-            }
-        }*/
-
+        
         /// <summary>
         /// whether robot1 collide robot2
         /// </summary>
@@ -1110,10 +1031,6 @@ namespace Referee.Simuro5v5
             RobotPosSquare[] DefenderPosSquare = new RobotPosSquare[5];
             RobotPosSquare[] OffensivePosSquare = new RobotPosSquare[5];
             RobotPosSquare[] SafePosSquare;
-            ////防守方的安全区域点
-            //RobotPosSquare[] PenaltyDefenderSafePosSquare;
-            ////进攻方的安全区域点
-            //RobotPosSquare[] PenaltyOffensiveSafePosSquare;
             int GoalieId;
 
             if (judgeResult.Actor == Side.Blue)
@@ -1121,36 +1038,20 @@ namespace Referee.Simuro5v5
                 SafePosSquare = new RobotPosSquare[10]
                 {
                     new RobotPosSquare(new Vector2D(5f, -6f)),
-                    new RobotPosSquare(new Vector2D(5f, -16f)),
-                    new RobotPosSquare(new Vector2D(5f, -26f)),
+                    new RobotPosSquare(new Vector2D(5f, -21f)),
                     new RobotPosSquare(new Vector2D(5f, -36f)),
-                    new RobotPosSquare(new Vector2D(5f, -46f)),
+                    new RobotPosSquare(new Vector2D(5f, -51f)),
+                    new RobotPosSquare(new Vector2D(5f, -66f)),
                     new RobotPosSquare(new Vector2D(5f, 6f)),
-                    new RobotPosSquare(new Vector2D(5f, 16f)),
-                    new RobotPosSquare(new Vector2D(5f, 26f)),
+                    new RobotPosSquare(new Vector2D(5f, 21f)),
                     new RobotPosSquare(new Vector2D(5f, 36f)),
-                    new RobotPosSquare(new Vector2D(5f, 46f))
+                    new RobotPosSquare(new Vector2D(5f, 51f)),
+                    new RobotPosSquare(new Vector2D(5f, 66f))
                 };
                 //蓝方执行点球时相关坐标
                 PenaltyBallPos = new Vector2D(-72.5f, 0f); //点球坐标
                 PenaltyDefenderGoaliePos = new Vector2D(-106f, 0f); //守门员坐标
                 PenaltyAttakcPos = new Vector2D(-50f, 0f); //进攻点球员坐标
-                //PenaltyDefenderSafePosSquare = new RobotPosSquare[5] {  //黄方的安全区域点
-                //new RobotPosSquare(new Vector2D(5f, 6f)),
-                //new RobotPosSquare(new Vector2D(5f, 16f)),
-                //new RobotPosSquare(new Vector2D(5f, 26f)),
-                //new RobotPosSquare(new Vector2D(5f, 36f)),
-                //new RobotPosSquare(new Vector2D(5f, 46f)) };
-
-                ////蓝方的安全区域点
-                //PenaltyOffensiveSafePosSquare = new RobotPosSquare[5] {
-                //    new RobotPosSquare(new Vector2D(5f, -6f)),
-                //    new RobotPosSquare(new Vector2D(5f, -16f)),
-                //    new RobotPosSquare(new Vector2D(5f, -26f)),
-                //    new RobotPosSquare(new Vector2D(5f, -36f)),
-                //    new RobotPosSquare(new Vector2D(5f, -46f)) };
-
-                //JudgeSatePosOverlap(PenaltyOffensiveSafePosSquare, PenaltyDefenderSafePosSquare, Side.Blue, Side.Yellow);
                 GoalieId = FindGoalie(Side.Yellow);
                 UpdateOffAndDefInfo(DefenderPosSquare, OffensivePosSquare, Side.Blue);
             }
@@ -1173,23 +1074,6 @@ namespace Referee.Simuro5v5
                 PenaltyBallPos = new Vector2D(72.5f, 0f); //点球坐标
                 PenaltyDefenderGoaliePos = new Vector2D(106f, 0f); //守门员坐标
                 PenaltyAttakcPos = new Vector2D(50f, 0f); //进攻点球员坐标
-                ////黄方的安全区域点
-                //PenaltyDefenderSafePosSquare = new RobotPosSquare[5] {
-                //    new RobotPosSquare(new Vector2D(-5f, -6f)),
-                //    new RobotPosSquare(new Vector2D(-5f, -16f)),
-                //    new RobotPosSquare(new Vector2D(-5f, -26f)),
-                //    new RobotPosSquare(new Vector2D(-5f, -36f)),
-                //    new RobotPosSquare(new Vector2D(-5f, -46f)) };
-
-                ////蓝方的安全区域点
-                //PenaltyOffensiveSafePosSquare = new RobotPosSquare[5] {
-                //    new RobotPosSquare(new Vector2D(-5f, 6f)),
-                //    new RobotPosSquare(new Vector2D(-5f, 16f)),
-                //    new RobotPosSquare(new Vector2D(-5f, 26f)),
-                //    new RobotPosSquare(new Vector2D(-5f, 36f)),
-                //    new RobotPosSquare(new Vector2D(-5f, 46f)) };
-
-                //JudgeSatePosOverlap(PenaltyOffensiveSafePosSquare, PenaltyDefenderSafePosSquare, Side.Yellow, Side.Blue);
                 GoalieId = FindGoalie(Side.Blue);
                 UpdateOffAndDefInfo(DefenderPosSquare, OffensivePosSquare, Side.Yellow);
             }
@@ -1345,18 +1229,6 @@ namespace Referee.Simuro5v5
             RobotPosSquare[] PlaceOffensivePosSquare = new RobotPosSquare[5];
             if (judgeResult.Actor == Side.Blue)
             {
-                //PlaceSafePosSquare = new RobotPosSquare[10] {
-                //    new RobotPosSquare(new Vector2D(32, 0)),
-                //    new RobotPosSquare(new Vector2D(32, 20)),
-                //    new RobotPosSquare(new Vector2D(32,40)),
-                //    new RobotPosSquare(new Vector2D(32,-20)),
-                //    new RobotPosSquare(new Vector2D(32,-40)),
-                //    new RobotPosSquare(new Vector2D(-32, 0)),
-                //    new RobotPosSquare(new Vector2D(-32, 20)),
-                //    new RobotPosSquare(new Vector2D(-32,40)),
-                //    new RobotPosSquare(new Vector2D(-32,-20)),
-                //    new RobotPosSquare(new Vector2D(-32,-40))};
-
                 PlaceOffensiveSafePosSquare = new RobotPosSquare[10]
                 {
                     new RobotPosSquare(new Vector2D(32, 0)),

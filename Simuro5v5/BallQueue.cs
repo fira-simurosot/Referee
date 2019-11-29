@@ -27,11 +27,7 @@ namespace Referee.Simuro5v5
             }
             else
             {
-                if (BallPosQueue.Count != 0)
-                {
-                    BallPosQueue.Dequeue();
-                }
-
+                BallPosQueue.Dequeue();
                 BallPosQueue.Enqueue(ballPos);
             }
         }
@@ -51,34 +47,6 @@ namespace Referee.Simuro5v5
         /// <returns></returns>
         public bool IsInFree(Vector2D newBallPos)
         {
-            //test for limitcapacity
-
-            //int test = 0;
-            //int testCap = Capacity;
-            //if (BallPosQueue.Count < Capacity)
-            //    return false;
-            //foreach (var pos in BallPosQueue)
-            //{
-            //    testpos[--testCap] = pos;
-            //}
-            //for (int i = 0; i < Capacity; i++)
-            //{
-            //    if (Vector2D.Distance(testpos[i], newBallPos) > LimitMove)
-            //    {
-            //        return false;
-            //    }
-            //    test++;
-            //    if (test == 3* Const.FramePerSecond)
-            //    {
-            //        Time.timeScale = 0;
-            //    }
-            //}
-            ////此时判罚是进入争球，进行清空
-            //BallPosQueue.Clear();
-            //return true;
-
-
-            //real code
             if (BallPosQueue.Count < Capacity)
                 return false;
             foreach (var pos in BallPosQueue)
