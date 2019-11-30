@@ -31,6 +31,7 @@ namespace Referee
             FoulInfo.Types.PhaseType matchstate = FoulInfo.Types.PhaseType.FirstHalf;
             FoulInfo.Types.PhaseType matchstatelast = matchstate;
             FiraMessage.SimToRef.Environment replySimulate = new FiraMessage.SimToRef.Environment();
+            Simuro5v5.Referee referee = new Simuro5v5.Referee();
             while (true)
             {
                 if (matchstep == 0)
@@ -40,14 +41,23 @@ namespace Referee
                 }
 
                 var matchinfo = SimEnvironment2MatchInfo(replySimulate);
+                matchinfo.TickMatch = (matchstate == FoulInfo.Types.PhaseType.FirstHalf
+                                          ? 0
+                                          : (matchstate == FoulInfo.Types.PhaseType.SecondHalf
+                                              ? 5 * 60 * 66
+                                              : 2 * 5 * 60 * 66))
+                                      + matchstep;
+                matchinfo.TickPhase = matchstep;
+                matchinfo.Referee = referee;
                 var judgeResult = matchinfo.Referee.Judge(matchinfo);
+                referee = matchinfo.Referee;
                 FoulInfo info = RefereeState(judgeResult, ref matchstate);
                 blueScore += matchinfo.Score.BlueScore;
                 yellowScore += matchinfo.Score.YellowScore;
 
                 if (matchstate == FoulInfo.Types.PhaseType.PenaltyShootout && blueScore != yellowScore)
                     break;
-                
+
                 if (matchstate != matchstatelast)
                 {
                     bool flagMatchOver = false;
@@ -62,6 +72,7 @@ namespace Referee
                             {
                                 flagMatchOver = true;
                             }
+
                             break;
                         case FoulInfo.Types.PhaseType.Stopped:
                             flagMatchOver = true;
@@ -69,13 +80,14 @@ namespace Referee
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
-                    
+
                     if (flagMatchOver)
                         break;
                     matchstep = 0;
                     matchstatelast = matchstate;
                     continue;
                 }
+
                 matchstatelast = matchstate;
 
                 if (info.Type == FoulInfo.Types.FoulType.PlayOn)
