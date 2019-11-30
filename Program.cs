@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Linq;
-using FiraMessage;
 using FiraMessage.SimToRef;
 using FiraMessage.RefToCli;
-using Google.Protobuf.Collections;
 using Grpc.Core;
 using Referee.Simuro5v5;
 using Ball = Referee.Simuro5v5.Ball;
@@ -26,125 +24,108 @@ namespace Referee
             var blueClient = new FiraMessage.RefToCli.Referee.RefereeClient(bluechannel);
             var yellowClient = new FiraMessage.RefToCli.Referee.RefereeClient(yellowchannel);
 
-            int matchstep = 0;
-            int blueScore = 0, yellowScore = 0;
-            FoulInfo.Types.PhaseType matchstate = FoulInfo.Types.PhaseType.FirstHalf;
-            FoulInfo.Types.PhaseType matchstatelast = matchstate;
+            MatchInfo matchInfo = new MatchInfo();
             FiraMessage.SimToRef.Environment replySimulate = new FiraMessage.SimToRef.Environment();
-            Simuro5v5.Referee referee = new Simuro5v5.Referee();
             while (true)
             {
-                if (matchstep == 0)
+                var judgeResult = matchInfo.Referee.Judge(matchInfo);
+                FoulInfo info = RefereeState(judgeResult, matchInfo);
+                switch (judgeResult.ResultType)
                 {
-                    replySimulate = MatchStart(clientSimulate, blueClient, yellowClient, matchstate);
-                    matchstep++;
-                }
-
-                var matchinfo = SimEnvironment2MatchInfo(replySimulate);
-                matchinfo.TickMatch = (matchstate == FoulInfo.Types.PhaseType.FirstHalf
-                                          ? 0
-                                          : (matchstate == FoulInfo.Types.PhaseType.SecondHalf
-                                              ? 5 * 60 * 66
-                                              : 2 * 5 * 60 * 66))
-                                      + matchstep;
-                matchinfo.TickPhase = matchstep;
-                matchinfo.Referee = referee;
-                var judgeResult = matchinfo.Referee.Judge(matchinfo);
-                referee = matchinfo.Referee;
-                FoulInfo info = RefereeState(judgeResult, ref matchstate);
-                blueScore += matchinfo.Score.BlueScore;
-                yellowScore += matchinfo.Score.YellowScore;
-
-                if (matchstate == FoulInfo.Types.PhaseType.PenaltyShootout && blueScore != yellowScore)
-                    break;
-
-                if (matchstate != matchstatelast)
-                {
-                    bool flagMatchOver = false;
-                    switch (matchstate)
-                    {
-                        case FoulInfo.Types.PhaseType.FirstHalf:
-                        case FoulInfo.Types.PhaseType.SecondHalf:
-                            break;
-                        case FoulInfo.Types.PhaseType.Overtime:
-                        case FoulInfo.Types.PhaseType.PenaltyShootout:
-                            if (blueScore != yellowScore)
-                            {
-                                flagMatchOver = true;
-                            }
-
-                            break;
-                        case FoulInfo.Types.PhaseType.Stopped:
-                            flagMatchOver = true;
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-
-                    if (flagMatchOver)
+                    case ResultType.NormalMatch:
+                        var replyblueClientCommand =
+                            blueClient.RunStrategy(SimEnvironment2CliEnvironment(replySimulate, info));
+                        var replyyellowClientCommand =
+                            yellowClient.RunStrategy(SimEnvironment2CliEnvironment(replySimulate, info));
+                        replySimulate =
+                            clientSimulate.Simulate(CliCommand2Packet(replyblueClientCommand,
+                                replyyellowClientCommand));
                         break;
-                    matchstep = 0;
-                    matchstatelast = matchstate;
-                    continue;
-                }
-
-                matchstatelast = matchstate;
-
-                if (info.Type == FoulInfo.Types.FoulType.PlayOn)
-                {
-                    var replyblueClientCommand =
-                        blueClient.RunStrategy(SimEnvironment2CliEnvironment(replySimulate, info));
-                    var replyyellowClientCommand =
-                        yellowClient.RunStrategy(SimEnvironment2CliEnvironment(replySimulate, info));
-                    replySimulate =
-                        clientSimulate.Simulate(CliCommand2Packet(replyblueClientCommand, replyyellowClientCommand));
-                }
-                else
-                {
-                    var sendClient = SimEnvironment2CliEnvironment(replySimulate, info);
-
-                    FiraMessage.Ball replyClientBall = FoulBallPosition(info, judgeResult);
-                    Robots replyblueClientRobots;
-                    Robots replyyellowClientRobots;
-
-                    if (judgeResult.WhoisFirst == Simuro5v5.Side.Blue)
-                    {
-                        if (info.Type == FoulInfo.Types.FoulType.GoalKick)
+                    case ResultType.NextPhase:
+                        switch (matchInfo.MatchPhase)
                         {
-                            replyClientBall = blueClient.SetBall(sendClient);
+                            case MatchPhase.FirstHalf:
+                                matchInfo.MatchPhase = MatchPhase.SecondHalf;
+                                break;
+                            case MatchPhase.SecondHalf:
+                                matchInfo.MatchPhase = MatchPhase.OverTime;
+                                break;
+                            case MatchPhase.OverTime:
+                            case MatchPhase.Penalty:
+                                matchInfo.MatchPhase = MatchPhase.Penalty;
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+
+                        matchInfo.TickPhase = 0;
+                        continue;
+                    case ResultType.GameOver:
+                        goto GAMEOVER_EXIT;
+                    default:
+                        var sendClient = SimEnvironment2CliEnvironment(replySimulate, info);
+                        FiraMessage.Ball replyClientBall;
+                        Robots replyblueClientRobots;
+                        Robots replyyellowClientRobots;
+                        switch (judgeResult.WhosBall)
+                        {
+                            case Simuro5v5.Side.Nobody:
+                                replyClientBall = FoulBallPosition(info, judgeResult);
+                                break;
+                            case Simuro5v5.Side.Blue:
+                                replyClientBall = blueClient.SetBall(sendClient);
+                                break;
+                            case Simuro5v5.Side.Yellow:
+                                replyClientBall = yellowClient.SetBall(sendClient);
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
                         }
 
                         UpdateCliEnvironment(ref sendClient, replyClientBall);
-                        replyblueClientRobots = blueClient.SetFormerRobots(sendClient);
-                        sendClient.FoulInfo.Actor = Side.Opponent;
-                        UpdateCliEnvironment(ref sendClient, replyblueClientRobots, false);
-                        replyyellowClientRobots = yellowClient.SetLaterRobots(sendClient);
-                        UpdateCliEnvironment(ref sendClient, replyyellowClientRobots, true);
-                    }
-                    else if (judgeResult.WhoisFirst == Simuro5v5.Side.Yellow)
-                    {
-                        if (info.Type == FoulInfo.Types.FoulType.GoalKick)
+                        switch (judgeResult.WhoisFirst)
                         {
-                            replyClientBall = yellowClient.SetBall(sendClient);
+                            case Simuro5v5.Side.Blue:
+                                replyblueClientRobots = blueClient.SetFormerRobots(sendClient);
+                                sendClient.FoulInfo.Actor = Side.Opponent;
+                                UpdateCliEnvironment(ref sendClient, replyblueClientRobots, false);
+                                replyyellowClientRobots = yellowClient.SetLaterRobots(sendClient);
+                                UpdateCliEnvironment(ref sendClient, replyyellowClientRobots, true);
+                                break;
+                            case Simuro5v5.Side.Yellow:
+                                replyyellowClientRobots = yellowClient.SetFormerRobots(sendClient);
+                                sendClient.FoulInfo.Actor = Side.Opponent;
+                                UpdateCliEnvironment(ref sendClient, replyyellowClientRobots, true);
+                                replyblueClientRobots = blueClient.SetLaterRobots(sendClient);
+                                UpdateCliEnvironment(ref sendClient, replyblueClientRobots, false);
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
                         }
 
-                        UpdateCliEnvironment(ref sendClient, replyClientBall);
-                        replyyellowClientRobots = yellowClient.SetFormerRobots(sendClient);
-                        sendClient.FoulInfo.Actor = Side.Opponent;
-                        UpdateCliEnvironment(ref sendClient, replyyellowClientRobots, true);
-                        replyblueClientRobots = blueClient.SetLaterRobots(sendClient);
-                        UpdateCliEnvironment(ref sendClient, replyblueClientRobots, false);
-                    }
-
-                    //Here are two conversion schemes.
-                    var matchinfo2 = CliEnvironment2MatchInfo(sendClient);
-                    //var matchinfo2 = All32MatchInfo(replyClientBall, replyblueClientRobots, replyyellowClientRobots);
-
-                    matchinfo2.Referee.JudgeAutoPlacement(matchinfo2, judgeResult, judgeResult.Actor);
-                    replySimulate = clientSimulate.Simulate(MatchInfo2Packet(matchinfo2));
+                        CliEnvironment2MatchInfo(sendClient, ref matchInfo);
+                        matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, judgeResult.Actor);
+                        replySimulate = clientSimulate.Simulate(MatchInfo2Packet(matchInfo));
+                        break;
                 }
 
-                matchstep++;
+                SimEnvironment2MatchInfo(replySimulate, ref matchInfo);
+                matchInfo.TickMatch++;
+                matchInfo.TickPhase++;
+            }
+
+            GAMEOVER_EXIT:
+            if (matchInfo.Score.BlueScore > matchInfo.Score.YellowScore)
+            {
+                //Blue win
+            }
+            else if (matchInfo.Score.BlueScore < matchInfo.Score.YellowScore)
+            {
+                //Yellow win
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException();
             }
 
             bluechannel.ShutdownAsync().Wait();
@@ -152,73 +133,19 @@ namespace Referee
             channel.ShutdownAsync().Wait();
         }
 
-        private static FiraMessage.SimToRef.Environment MatchStart(
-            Simulate.SimulateClient clientSimulate,
-            FiraMessage.RefToCli.Referee.RefereeClient blueClient,
-            FiraMessage.RefToCli.Referee.RefereeClient yellowClient,
-            FoulInfo.Types.PhaseType matchstate)
+        private static FoulInfo RefereeState(JudgeResult judgeResult, MatchInfo matchInfo)
         {
-            FiraMessage.RefToCli.Environment sendClient = new FiraMessage.RefToCli.Environment
-            {
-                Frame = new Frame
-                {
-                    Ball = new FiraMessage.Ball
-                    {
-                        X = Const.PlaceKickX,
-                        Y = Const.PlaceKickY,
-                        Z = 0.0
-                    }
-                },
-                FoulInfo = new FoulInfo
-                {
-                    Actor = Side.Self,
-                    Phase = matchstate,
-                    Type = FoulInfo.Types.FoulType.PlaceKick
-                }
-            };
-            var replyblueClientRobots = blueClient.SetFormerRobots(sendClient);
-            UpdateCliEnvironment(ref sendClient, replyblueClientRobots, false);
-            sendClient.FoulInfo.Actor = Side.Opponent;
-            var replyyellowClientRobots = yellowClient.SetLaterRobots(sendClient);
-            UpdateCliEnvironment(ref sendClient, replyyellowClientRobots, true);
-
-            var matchinfo = CliEnvironment2MatchInfo(sendClient);
-            var judgeResult = new JudgeResult
-            {
-                ResultType = ResultType.PlaceKick,
-                Actor = Simuro5v5.Side.Blue,
-                Reason = "",
-                WhoGoal = Simuro5v5.Side.Nobody
-            };
-            matchinfo.Referee.JudgeAutoPlacement(matchinfo, judgeResult, judgeResult.Actor);
-            return clientSimulate.Simulate(MatchInfo2Packet(matchinfo));
-        }
-
-        private static FoulInfo RefereeState(JudgeResult judgeResult, ref FoulInfo.Types.PhaseType matchstate)
-        {
+            //Don't use FoulInfo.Types.PhaseType.Stopped.
             FoulInfo info = new FoulInfo();
             info.Actor = Side.Self;
-            if (judgeResult.ResultType == ResultType.NextPhase)
+            info.Phase = matchInfo.MatchPhase switch
             {
-                info.Phase = matchstate switch
-                {
-                    FoulInfo.Types.PhaseType.FirstHalf => FoulInfo.Types.PhaseType.SecondHalf,
-                    FoulInfo.Types.PhaseType.SecondHalf => FoulInfo.Types.PhaseType.Overtime,
-                    FoulInfo.Types.PhaseType.Overtime => FoulInfo.Types.PhaseType.PenaltyShootout,
-                    FoulInfo.Types.PhaseType.PenaltyShootout => FoulInfo.Types.PhaseType.Stopped,
-                    FoulInfo.Types.PhaseType.Stopped => FoulInfo.Types.PhaseType.Stopped,
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-                matchstate = info.Phase;
-            }
-            else
-            {
-                if (judgeResult.ResultType == ResultType.NormalMatch)
-                {
-                    info.Phase = matchstate;
-                }
-            }
-
+                MatchPhase.FirstHalf => FoulInfo.Types.PhaseType.FirstHalf,
+                MatchPhase.SecondHalf => FoulInfo.Types.PhaseType.SecondHalf,
+                MatchPhase.OverTime => FoulInfo.Types.PhaseType.Overtime,
+                MatchPhase.Penalty => FoulInfo.Types.PhaseType.PenaltyShootout,
+                _ => throw new ArgumentOutOfRangeException()
+            };
             info.Type = judgeResult.ResultType switch
             {
                 ResultType.NormalMatch => FoulInfo.Types.FoulType.PlayOn,
@@ -289,16 +216,9 @@ namespace Referee
             return replyClientBall;
         }
 
-        private static FiraMessage.SimToRef.Environment MatchNormal(
-            Simulate.SimulateClient clientSimulate,
-            FiraMessage.RefToCli.Referee.RefereeClient blueClient,
-            FiraMessage.RefToCli.Referee.RefereeClient yellowClient)
-        {
-            return new FiraMessage.SimToRef.Environment();
-        }
-
         //TODO: We don't use FiraMessage.SimToRef.Environment.Field. We don't know how to use this var. Field should be const. 
-        private static MatchInfo SimEnvironment2MatchInfo(FiraMessage.SimToRef.Environment environment)
+        private static void SimEnvironment2MatchInfo(FiraMessage.SimToRef.Environment environment,
+            ref MatchInfo matchInfo)
         {
             var matchPhase = MatchPhase.FirstHalf;
             if (environment.Step > 5 * 60 * 6)
@@ -335,22 +255,20 @@ namespace Referee
                 }
             }
 
-            return new MatchInfo
+            //TODO: How to use environment.Step?
+            //matchInfo.TickMatch = (int) environment.Step;
+            //matchInfo.TickPhase = (int) (environment.Step % (5 * 60 * 66));
+            matchInfo.MatchPhase = matchPhase;
+            matchInfo.Ball = new Ball
             {
-                TickMatch = (int) environment.Step,
-                TickPhase = (int) (environment.Step % (5 * 60 * 66)),
-                MatchPhase = matchPhase,
-                Ball = new Ball
+                pos = new Vector2D
                 {
-                    pos = new Vector2D
-                    {
-                        x = environment.Frame.Ball.X,
-                        y = environment.Frame.Ball.Y
-                    }
-                },
-                BlueRobots = new[] {robot[0], robot[1], robot[2], robot[3], robot[4]},
-                YellowRobots = new[] {robot[5], robot[6], robot[7], robot[8], robot[9]}
+                    x = environment.Frame.Ball.X,
+                    y = environment.Frame.Ball.Y
+                }
             };
+            matchInfo.BlueRobots = new[] {robot[0], robot[1], robot[2], robot[3], robot[4]};
+            matchInfo.YellowRobots = new[] {robot[5], robot[6], robot[7], robot[8], robot[9]};
         }
 
         private static FiraMessage.RefToCli.Environment SimEnvironment2CliEnvironment(
@@ -431,7 +349,8 @@ namespace Referee
             }
         }
 
-        private static MatchInfo CliEnvironment2MatchInfo(FiraMessage.RefToCli.Environment cliEnvironment)
+        private static void CliEnvironment2MatchInfo(FiraMessage.RefToCli.Environment cliEnvironment,
+            ref MatchInfo matchInfo)
         {
             var robot = new Robot[10];
             for (int i = 0; i < 10; i++)
@@ -454,53 +373,16 @@ namespace Referee
                 }
             }
 
-            return new MatchInfo
+            matchInfo.Ball = new Ball
             {
-                Ball = new Ball
+                pos = new Vector2D
                 {
-                    pos = new Vector2D
-                    {
-                        x = cliEnvironment.Frame.Ball.X,
-                        y = cliEnvironment.Frame.Ball.Y
-                    }
-                },
-                BlueRobots = new[] {robot[0], robot[1], robot[2], robot[3], robot[4]},
-                YellowRobots = new[] {robot[5], robot[6], robot[7], robot[8], robot[9]}
-            };
-        }
-
-        private static MatchInfo All32MatchInfo(FiraMessage.Ball ball, Robots blueRobots, Robots yellowRobots)
-        {
-            var robot = new Robot[10];
-            for (int i = 0; i < 10; i++)
-            {
-                if (i < 5)
-                {
-                    robot[blueRobots.Robots_[i].RobotId].pos.x = blueRobots.Robots_[i].X;
-                    robot[blueRobots.Robots_[i].RobotId].pos.y = blueRobots.Robots_[i].Y;
-                    robot[blueRobots.Robots_[i].RobotId].rotation = blueRobots.Robots_[i].Orientation;
+                    x = cliEnvironment.Frame.Ball.X,
+                    y = cliEnvironment.Frame.Ball.Y
                 }
-                else if (i >= 5)
-                {
-                    robot[5 + yellowRobots.Robots_[i - 5].RobotId].pos.x = yellowRobots.Robots_[i - 5].X;
-                    robot[5 + yellowRobots.Robots_[i - 5].RobotId].pos.y = yellowRobots.Robots_[i - 5].Y;
-                    robot[5 + yellowRobots.Robots_[i - 5].RobotId].rotation = yellowRobots.Robots_[i - 5].Orientation;
-                }
-            }
-
-            return new MatchInfo
-            {
-                Ball = new Ball
-                {
-                    pos = new Vector2D
-                    {
-                        x = ball.X,
-                        y = ball.Y
-                    }
-                },
-                BlueRobots = new[] {robot[0], robot[1], robot[2], robot[3], robot[4]},
-                YellowRobots = new[] {robot[5], robot[6], robot[7], robot[8], robot[9]}
             };
+            matchInfo.BlueRobots = new[] {robot[0], robot[1], robot[2], robot[3], robot[4]};
+            matchInfo.YellowRobots = new[] {robot[5], robot[6], robot[7], robot[8], robot[9]};
         }
 
         private static Packet MatchInfo2Packet(MatchInfo matchInfo)
