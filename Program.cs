@@ -18,11 +18,11 @@ namespace Referee
         {
             Console.WriteLine("This project is still in early stage");
             Channel channel = new Channel("127.0.0.1:50051", ChannelCredentials.Insecure);
-            var bluechannel = channel;
-            var yellowchannel = channel;
+            var blueChannel = channel;
+            var yellowChannel = channel;
             var clientSimulate = new Simulate.SimulateClient(channel);
-            var blueClient = new FiraMessage.RefToCli.Referee.RefereeClient(bluechannel);
-            var yellowClient = new FiraMessage.RefToCli.Referee.RefereeClient(yellowchannel);
+            var blueClient = new FiraMessage.RefToCli.Referee.RefereeClient(blueChannel);
+            var yellowClient = new FiraMessage.RefToCli.Referee.RefereeClient(yellowChannel);
 
             MatchInfo matchInfo = new MatchInfo();
             FiraMessage.SimToRef.Environment replySimulate = new FiraMessage.SimToRef.Environment();
@@ -33,13 +33,13 @@ namespace Referee
                 switch (judgeResult.ResultType)
                 {
                     case ResultType.NormalMatch:
-                        var replyblueClientCommand =
+                        var replyBlueClientCommand =
                             blueClient.RunStrategy(SimEnvironment2CliEnvironment(replySimulate, info));
-                        var replyyellowClientCommand =
+                        var replyYellowClientCommand =
                             yellowClient.RunStrategy(SimEnvironment2CliEnvironment(replySimulate, info));
                         replySimulate =
-                            clientSimulate.Simulate(CliCommand2Packet(replyblueClientCommand,
-                                replyyellowClientCommand));
+                            clientSimulate.Simulate(CliCommand2Packet(replyBlueClientCommand,
+                                replyYellowClientCommand));
                         break;
                     case ResultType.NextPhase:
                         switch (matchInfo.MatchPhase)
@@ -65,8 +65,8 @@ namespace Referee
                     default:
                         var sendClient = SimEnvironment2CliEnvironment(replySimulate, info);
                         FiraMessage.Ball replyClientBall;
-                        Robots replyblueClientRobots;
-                        Robots replyyellowClientRobots;
+                        Robots replyBlueClientRobots;
+                        Robots replyYellowClientRobots;
                         switch (judgeResult.WhosBall)
                         {
                             case Simuro5v5.Side.Nobody:
@@ -86,18 +86,18 @@ namespace Referee
                         switch (judgeResult.WhoisFirst)
                         {
                             case Simuro5v5.Side.Blue:
-                                replyblueClientRobots = blueClient.SetFormerRobots(sendClient);
+                                replyBlueClientRobots = blueClient.SetFormerRobots(sendClient);
                                 sendClient.FoulInfo.Actor = Side.Opponent;
-                                UpdateCliEnvironment(ref sendClient, replyblueClientRobots, false);
-                                replyyellowClientRobots = yellowClient.SetLaterRobots(sendClient);
-                                UpdateCliEnvironment(ref sendClient, replyyellowClientRobots, true);
+                                UpdateCliEnvironment(ref sendClient, replyBlueClientRobots, false);
+                                replyYellowClientRobots = yellowClient.SetLaterRobots(sendClient);
+                                UpdateCliEnvironment(ref sendClient, replyYellowClientRobots, true);
                                 break;
                             case Simuro5v5.Side.Yellow:
-                                replyyellowClientRobots = yellowClient.SetFormerRobots(sendClient);
+                                replyYellowClientRobots = yellowClient.SetFormerRobots(sendClient);
                                 sendClient.FoulInfo.Actor = Side.Opponent;
-                                UpdateCliEnvironment(ref sendClient, replyyellowClientRobots, true);
-                                replyblueClientRobots = blueClient.SetLaterRobots(sendClient);
-                                UpdateCliEnvironment(ref sendClient, replyblueClientRobots, false);
+                                UpdateCliEnvironment(ref sendClient, replyYellowClientRobots, true);
+                                replyBlueClientRobots = blueClient.SetLaterRobots(sendClient);
+                                UpdateCliEnvironment(ref sendClient, replyBlueClientRobots, false);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
@@ -128,37 +128,39 @@ namespace Referee
                 throw new ArgumentOutOfRangeException();
             }
 
-            bluechannel.ShutdownAsync().Wait();
-            yellowchannel.ShutdownAsync().Wait();
+            blueChannel.ShutdownAsync().Wait();
+            yellowChannel.ShutdownAsync().Wait();
             channel.ShutdownAsync().Wait();
         }
 
         private static FoulInfo RefereeState(JudgeResult judgeResult, MatchInfo matchInfo)
         {
             //Don't use FoulInfo.Types.PhaseType.Stopped.
-            FoulInfo info = new FoulInfo();
-            info.Actor = Side.Self;
-            info.Phase = matchInfo.MatchPhase switch
+            FoulInfo info = new FoulInfo
             {
-                MatchPhase.FirstHalf => FoulInfo.Types.PhaseType.FirstHalf,
-                MatchPhase.SecondHalf => FoulInfo.Types.PhaseType.SecondHalf,
-                MatchPhase.OverTime => FoulInfo.Types.PhaseType.Overtime,
-                MatchPhase.Penalty => FoulInfo.Types.PhaseType.PenaltyShootout,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-            info.Type = judgeResult.ResultType switch
-            {
-                ResultType.NormalMatch => FoulInfo.Types.FoulType.PlayOn,
-                ResultType.NextPhase => FoulInfo.Types.FoulType.PlayOn,
-                ResultType.GameOver => FoulInfo.Types.FoulType.PlayOn,
-                ResultType.PlaceKick => FoulInfo.Types.FoulType.PlaceKick,
-                ResultType.GoalKick => FoulInfo.Types.FoulType.GoalKick,
-                ResultType.PenaltyKick => FoulInfo.Types.FoulType.PenaltyKick,
-                ResultType.FreeKickRightTop => FoulInfo.Types.FoulType.FreeBallRightTop,
-                ResultType.FreeKickRightBot => FoulInfo.Types.FoulType.FreeBallRightBot,
-                ResultType.FreeKickLeftTop => FoulInfo.Types.FoulType.FreeBallLeftTop,
-                ResultType.FreeKickLeftBot => FoulInfo.Types.FoulType.FreeBallLeftBot,
-                _ => throw new ArgumentOutOfRangeException()
+                Actor = Side.Self,
+                Phase = matchInfo.MatchPhase switch
+                {
+                    MatchPhase.FirstHalf => FoulInfo.Types.PhaseType.FirstHalf,
+                    MatchPhase.SecondHalf => FoulInfo.Types.PhaseType.SecondHalf,
+                    MatchPhase.OverTime => FoulInfo.Types.PhaseType.Overtime,
+                    MatchPhase.Penalty => FoulInfo.Types.PhaseType.PenaltyShootout,
+                    _ => throw new ArgumentOutOfRangeException()
+                },
+                Type = judgeResult.ResultType switch
+                {
+                    ResultType.NormalMatch => FoulInfo.Types.FoulType.PlayOn,
+                    ResultType.NextPhase => FoulInfo.Types.FoulType.PlayOn,
+                    ResultType.GameOver => FoulInfo.Types.FoulType.PlayOn,
+                    ResultType.PlaceKick => FoulInfo.Types.FoulType.PlaceKick,
+                    ResultType.GoalKick => FoulInfo.Types.FoulType.GoalKick,
+                    ResultType.PenaltyKick => FoulInfo.Types.FoulType.PenaltyKick,
+                    ResultType.FreeKickRightTop => FoulInfo.Types.FoulType.FreeBallRightTop,
+                    ResultType.FreeKickRightBot => FoulInfo.Types.FoulType.FreeBallRightBot,
+                    ResultType.FreeKickLeftTop => FoulInfo.Types.FoulType.FreeBallLeftTop,
+                    ResultType.FreeKickLeftBot => FoulInfo.Types.FoulType.FreeBallLeftBot,
+                    _ => throw new ArgumentOutOfRangeException()
+                }
             };
 
             return info;
@@ -272,35 +274,35 @@ namespace Referee
         }
 
         private static FiraMessage.RefToCli.Environment SimEnvironment2CliEnvironment(
-            FiraMessage.SimToRef.Environment simenvironment, FoulInfo info)
+            FiraMessage.SimToRef.Environment simEnvironment, FoulInfo info)
         {
             return new FiraMessage.RefToCli.Environment
             {
-                Frame = simenvironment.Frame,
+                Frame = simEnvironment.Frame,
                 FoulInfo = info
             };
         }
 
-        private static Packet CliCommand2Packet(FiraMessage.RefToCli.Command bluecommand,
-            FiraMessage.RefToCli.Command yellowcommand)
+        private static Packet CliCommand2Packet(FiraMessage.RefToCli.Command blueCommand,
+            FiraMessage.RefToCli.Command yellowCommand)
         {
-            var cmds = new FiraMessage.SimToRef.Command[10];
+            var commands = new FiraMessage.SimToRef.Command[10];
             for (int i = 0; i < 10; i++)
             {
                 if (i < 5)
                 {
-                    cmds[bluecommand.Wheels[i].RobotId].Id = (uint) bluecommand.Wheels[i].RobotId;
-                    cmds[bluecommand.Wheels[i].RobotId].Yellowteam = false;
-                    cmds[bluecommand.Wheels[i].RobotId].WheelLeft = bluecommand.Wheels[i].Left;
-                    cmds[bluecommand.Wheels[i].RobotId].WheelRight = bluecommand.Wheels[i].Right;
+                    commands[blueCommand.Wheels[i].RobotId].Id = (uint) blueCommand.Wheels[i].RobotId;
+                    commands[blueCommand.Wheels[i].RobotId].Yellowteam = false;
+                    commands[blueCommand.Wheels[i].RobotId].WheelLeft = blueCommand.Wheels[i].Left;
+                    commands[blueCommand.Wheels[i].RobotId].WheelRight = blueCommand.Wheels[i].Right;
                 }
 
                 if (i >= 5)
                 {
-                    cmds[5 + yellowcommand.Wheels[i - 5].RobotId].Id = (uint) yellowcommand.Wheels[i - 5].RobotId;
-                    cmds[5 + yellowcommand.Wheels[i - 5].RobotId].Yellowteam = true;
-                    cmds[5 + yellowcommand.Wheels[i - 5].RobotId].WheelLeft = yellowcommand.Wheels[i - 5].Left;
-                    cmds[5 + yellowcommand.Wheels[i - 5].RobotId].WheelRight = yellowcommand.Wheels[i - 5].Right;
+                    commands[5 + yellowCommand.Wheels[i - 5].RobotId].Id = (uint) yellowCommand.Wheels[i - 5].RobotId;
+                    commands[5 + yellowCommand.Wheels[i - 5].RobotId].Yellowteam = true;
+                    commands[5 + yellowCommand.Wheels[i - 5].RobotId].WheelLeft = yellowCommand.Wheels[i - 5].Left;
+                    commands[5 + yellowCommand.Wheels[i - 5].RobotId].WheelRight = yellowCommand.Wheels[i - 5].Right;
                 }
             }
 
@@ -310,8 +312,8 @@ namespace Referee
                 {
                     RobotCommands =
                     {
-                        cmds[0], cmds[1], cmds[2], cmds[3], cmds[4],
-                        cmds[5], cmds[6], cmds[7], cmds[8], cmds[9]
+                        commands[0], commands[1], commands[2], commands[3], commands[4],
+                        commands[5], commands[6], commands[7], commands[8], commands[9]
                     }
                 }
             };
@@ -324,9 +326,9 @@ namespace Referee
         }
 
         private static void UpdateCliEnvironment(ref FiraMessage.RefToCli.Environment cliEnvironment, Robots robots,
-            bool isyellow)
+            bool isYellow)
         {
-            switch (isyellow)
+            switch (isYellow)
             {
                 case false:
                 {
