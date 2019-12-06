@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
+using FiraMessage;
 using FiraMessage.SimToRef;
 using FiraMessage.RefToCli;
+using Google.Protobuf.Collections;
 using Grpc.Core;
 using Referee.Simuro5v5;
 using Ball = Referee.Simuro5v5.Ball;
@@ -23,6 +25,12 @@ namespace Referee
             var clientSimulate = new Simulate.SimulateClient(channel);
             var blueClient = new FiraMessage.RefToCli.Referee.RefereeClient(blueChannel);
             var yellowClient = new FiraMessage.RefToCli.Referee.RefereeClient(yellowChannel);
+            
+            FiraMessage.RefToCli.TeamInfo teamInfo = new FiraMessage.RefToCli.TeamInfo();
+            teamInfo.Color = Color.B;
+            var blueName = blueClient.Register(teamInfo);
+            teamInfo.Color = Color.Y;
+            var yellowName = yellowClient.Register(teamInfo);
 
             MatchInfo matchInfo = new MatchInfo();
             FiraMessage.SimToRef.Environment replySimulate = new FiraMessage.SimToRef.Environment();
@@ -36,7 +44,7 @@ namespace Referee
                         var replyBlueClientCommand =
                             blueClient.RunStrategy(SimEnvironment2CliEnvironment(replySimulate, info));
                         var replyYellowClientCommand =
-                            yellowClient.RunStrategy(SimEnvironment2CliEnvironment(replySimulate, info));
+                            yellowClient.RunStrategy(YellowRight(SimEnvironment2CliEnvironment(replySimulate, info)));
                         replySimulate =
                             clientSimulate.Simulate(CliCommand2Packet(replyBlueClientCommand,
                                 replyYellowClientCommand));
@@ -76,7 +84,8 @@ namespace Referee
                                 replyClientBall = blueClient.SetBall(sendClient);
                                 break;
                             case Simuro5v5.Side.Yellow:
-                                replyClientBall = yellowClient.SetBall(sendClient);
+                                replyClientBall = yellowClient.SetBall(YellowRight(sendClient));
+                                YellowLeft(ref replyClientBall);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
@@ -89,11 +98,13 @@ namespace Referee
                                 replyBlueClientRobots = blueClient.SetFormerRobots(sendClient);
                                 sendClient.FoulInfo.Actor = Side.Opponent;
                                 UpdateCliEnvironment(ref sendClient, replyBlueClientRobots, false);
-                                replyYellowClientRobots = yellowClient.SetLaterRobots(sendClient);
+                                replyYellowClientRobots = yellowClient.SetLaterRobots(YellowRight(sendClient));
+                                YellowLeft(ref replyYellowClientRobots);
                                 UpdateCliEnvironment(ref sendClient, replyYellowClientRobots, true);
                                 break;
                             case Simuro5v5.Side.Yellow:
-                                replyYellowClientRobots = yellowClient.SetFormerRobots(sendClient);
+                                replyYellowClientRobots = yellowClient.SetFormerRobots(YellowRight(sendClient));
+                                YellowLeft(ref replyYellowClientRobots);
                                 sendClient.FoulInfo.Actor = Side.Opponent;
                                 UpdateCliEnvironment(ref sendClient, replyYellowClientRobots, true);
                                 replyBlueClientRobots = blueClient.SetLaterRobots(sendClient);
@@ -117,11 +128,13 @@ namespace Referee
             GAMEOVER_EXIT:
             if (matchInfo.Score.BlueScore > matchInfo.Score.YellowScore)
             {
-                //Blue win
+                blueName.Name += " Win";
+                Console.Out.WriteLine(blueName.Name);
             }
             else if (matchInfo.Score.BlueScore < matchInfo.Score.YellowScore)
             {
-                //Yellow win
+                yellowName.Name += " Win";
+                Console.Out.WriteLine(yellowName.Name);
             }
             else
             {
@@ -283,6 +296,61 @@ namespace Referee
             };
         }
 
+        private static FiraMessage.RefToCli.Environment YellowRight(FiraMessage.RefToCli.Environment clienvironment)
+        {
+            return new FiraMessage.RefToCli.Environment
+            {
+                FoulInfo = clienvironment.FoulInfo,
+                Frame = new Frame
+                {
+                    Ball = clienvironment.Frame.Ball,
+                    RobotsBlue =
+                    {
+                        clienvironment.Frame.RobotsBlue.Select((robot, i) => new FiraMessage.Robot
+                        {
+                            RobotId = robot.RobotId,
+                            X = -robot.X,
+                            Y = -robot.Y,
+                            Orientation = robot.Orientation > 0 ? robot.Orientation - 180 : robot.Orientation + 180
+                        })
+                    },
+                    RobotsYellow =
+                    {
+                        clienvironment.Frame.RobotsYellow.Select((robot, i) => new FiraMessage.Robot
+                        {
+                            RobotId = robot.RobotId,
+                            X = -robot.X,
+                            Y = -robot.Y,
+                            Orientation = robot.Orientation > 0 ? robot.Orientation - 180 : robot.Orientation + 180
+                        })
+                    }
+                }
+            };
+        }
+
+        private static void YellowLeft(ref FiraMessage.Ball ball)
+        {
+            ball.X = -ball.X;
+            ball.Y = -ball.Y;
+        }
+
+        private static void YellowLeft(ref Robots robots)
+        {
+            robots = new Robots
+            {
+                Robots_ =
+                {
+                    robots.Robots_.Select((robot, i) => new FiraMessage.Robot
+                    {
+                        RobotId = robot.RobotId,
+                        X = -robot.X,
+                        Y = -robot.Y,
+                        Orientation = robot.Orientation > 0 ? robot.Orientation - 180 : robot.Orientation + 180
+                    })
+                }
+            };
+        }
+        
         private static Packet CliCommand2Packet(FiraMessage.RefToCli.Command blueCommand,
             FiraMessage.RefToCli.Command yellowCommand)
         {
@@ -328,26 +396,21 @@ namespace Referee
         private static void UpdateCliEnvironment(ref FiraMessage.RefToCli.Environment cliEnvironment, Robots robots,
             bool isYellow)
         {
-            switch (isYellow)
+            if (!isYellow)
             {
-                case false:
-                {
-                    cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[0].RobotId] = robots.Robots_[0];
-                    cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[1].RobotId] = robots.Robots_[1];
-                    cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[2].RobotId] = robots.Robots_[2];
-                    cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[3].RobotId] = robots.Robots_[3];
-                    cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[4].RobotId] = robots.Robots_[4];
-                    break;
-                }
-                case true:
-                {
-                    cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[0].RobotId] = robots.Robots_[0];
-                    cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[1].RobotId] = robots.Robots_[1];
-                    cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[2].RobotId] = robots.Robots_[2];
-                    cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[3].RobotId] = robots.Robots_[3];
-                    cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[4].RobotId] = robots.Robots_[4];
-                    break;
-                }
+                cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[0].RobotId] = robots.Robots_[0];
+                cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[1].RobotId] = robots.Robots_[1];
+                cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[2].RobotId] = robots.Robots_[2];
+                cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[3].RobotId] = robots.Robots_[3];
+                cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[4].RobotId] = robots.Robots_[4];
+            }
+            else
+            {
+                cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[0].RobotId] = robots.Robots_[0];
+                cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[1].RobotId] = robots.Robots_[1];
+                cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[2].RobotId] = robots.Robots_[2];
+                cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[3].RobotId] = robots.Robots_[3];
+                cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[4].RobotId] = robots.Robots_[4];
             }
         }
 
