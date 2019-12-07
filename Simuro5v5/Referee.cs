@@ -177,18 +177,6 @@ namespace Referee.Simuro5v5
         /// <returns>下一拍应有的动作信息</returns>
         public JudgeResult Judge(MatchInfo matchInfo)
         {
-            ////test penalty shootout
-            //if(matchInfo.MatchPhase == MatchPhase.FirstHalf)
-            //{
-            //    matchInfo.MatchPhase = MatchPhase.Penalty;
-            //}
-            //test three attack
-            for (int i = 1; i < Const.RobotsPerTeam; i++)
-            {
-                //    matchInfo.YellowRobots[i].pos.y = 200;
-            }
-
-            /////
             this.blueScore = matchInfo.Score.BlueScore;
             this.yellowScore = matchInfo.Score.YellowScore;
             this.matchInfo = matchInfo;

@@ -13,17 +13,17 @@ namespace Referee.Simuro5v5
         /// 和 Point2 构成对角线
         /// </summary>
         public abstract Vector2D Point1 { get; }
-        
+
         /// <summary>
         /// 和 Point1 构成对角线
         /// </summary>
         public abstract Vector2D Point2 { get; }
-        
+
         /// <summary>
         /// 和 Point4 构成对角线
         /// </summary>
         public abstract Vector2D Point3 { get; }
-        
+
         /// <summary>
         /// 和 Point3 构成对角线
         /// </summary>
@@ -33,7 +33,7 @@ namespace Referee.Simuro5v5
         /// 矩形中心点
         /// </summary>
         protected virtual Vector2D Midpoint => (Point1 + Point2) / 2;
-        
+
         /// <summary>
         /// 获取一个集合，表示这个矩形的边缘线
         /// </summary>
@@ -58,7 +58,7 @@ namespace Referee.Simuro5v5
             var cb = -bc;
             var da = -ad;
             var db = -bd;
-            
+
             // 判断共线的情况
             if (Math.Abs(ac.Cross(ad)) < 1e-6 && Math.Abs(bc.Cross(bd)) < 1e-6)
             {
@@ -67,7 +67,7 @@ namespace Referee.Simuro5v5
             }
 
             return (ac.Cross(ad)) * (bc.Cross(bd)) <= 0 &&
-                   (ca.Cross(cb)) * (da.Cross(db)) <= 0;    
+                   (ca.Cross(cb)) * (da.Cross(db)) <= 0;
         }
 
         public bool IsCrossedBy(RectangleBase rect)
@@ -123,9 +123,9 @@ namespace Referee.Simuro5v5
         public bool ContainsCircle(Vector2D point, double radius)
         {
             return new UprightRectangle(LeftX + radius,
-                                        RightX - radius,
-                                        TopY - radius,
-                                        BotY - radius).ContainsPoint(point);
+                RightX - radius,
+                TopY - radius,
+                BotY - radius).ContainsPoint(point);
         }
     }
 
@@ -146,18 +146,20 @@ namespace Referee.Simuro5v5
         public Square(Vector2D robotPosition, double angleInDegree = 0, double hrl = 3.9341f)
         {
             double robotRadius = hrl * Math.Sqrt(2);
-            
+
             //角度规整
             while (angleInDegree > 45)
             {
                 angleInDegree -= 90;
             }
+
             while (angleInDegree < -45)
             {
                 angleInDegree += 90;
             }
+
             angleInDegree += 45;
-            
+
             double point1X = robotPosition.x + robotRadius * Math.Cos(angleInDegree * Math.PI / 180);
             double point1Y = robotPosition.y + robotRadius * Math.Sin(angleInDegree * Math.PI / 180);
             double point2X = robotPosition.x - robotRadius * Math.Cos(angleInDegree * Math.PI / 180);
@@ -165,6 +167,7 @@ namespace Referee.Simuro5v5
             Point1 = new Vector2D(point1X, point1Y);
             Point2 = new Vector2D(point2X, point2Y);
         }
+
         /// <summary>
         /// 第一个对角点
         /// </summary>
@@ -176,10 +179,10 @@ namespace Referee.Simuro5v5
         public override Vector2D Point2 { get; }
 
         public override Vector2D Point3 => (Point1 - Midpoint).Rotate(Math.PI / 2)
-                                  + Midpoint;
+                                           + Midpoint;
 
         public override Vector2D Point4 => (Point1 - Midpoint).Rotate(-Math.PI / 2)
-                                  + Midpoint;
+                                           + Midpoint;
 
         /// <summary>
         /// 判断正方形是否与园相交
@@ -205,7 +208,8 @@ namespace Referee.Simuro5v5
         /// <param name="area">待判断的矩形区域</param>
         /// <returns></returns>
         public bool IsInRectangle(UprightRectangle area)
-        {   //TODO如果球员有大于零且小于二分之一区域在矩形内，判定结果为不在区域里，应该判断在区域里
+        {
+            //TODO如果球员有大于零且小于二分之一区域在矩形内，判定结果为不在区域里，应该判断在区域里
             double width = Vector2D.Distance(Point1, Point3);
             double outer = Math.Max(
                 Vector2D.Distance(area.Point1, area.Point3),

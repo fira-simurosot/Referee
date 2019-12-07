@@ -33,9 +33,12 @@ namespace Referee.Simuro5v5
 
         // 时间
         public int TickMatch;
+
         public int TickPhase;
+
         // 比分
         public MatchScore Score;
+
         // 比赛阶段：上下半场、加时、点球大战
         public MatchPhase MatchPhase;
 
@@ -51,8 +54,8 @@ namespace Referee.Simuro5v5
 
         public MatchInfo(Robot[] blue, Robot[] yellow, Ball ball)
         {
-            BlueRobots = (Robot[])blue.Clone();
-            YellowRobots = (Robot[])yellow.Clone();
+            BlueRobots = (Robot[]) blue.Clone();
+            YellowRobots = (Robot[]) yellow.Clone();
             Ball = ball;
         }
 
@@ -64,8 +67,8 @@ namespace Referee.Simuro5v5
         /// <param name="whosball">球的信息来自哪方</param>
         public MatchInfo(PlacementInfo blue, PlacementInfo yellow, Side whosball)
         {
-            BlueRobots = (Robot[])blue.Robots.Clone();
-            YellowRobots = (Robot[])yellow.Robots.Clone();
+            BlueRobots = (Robot[]) blue.Robots.Clone();
+            YellowRobots = (Robot[]) yellow.Robots.Clone();
             switch (whosball)
             {
                 case Side.Blue:
@@ -90,9 +93,9 @@ namespace Referee.Simuro5v5
                 TickPhase = TickPhase,
                 MatchPhase = MatchPhase,
                 Score = Score,
-                Referee = (Referee)Referee.Clone(),
-                BlueRobots = (Robot[])BlueRobots.Clone(),
-                YellowRobots = (Robot[])YellowRobots.Clone(),
+                Referee = (Referee) Referee.Clone(),
+                BlueRobots = (Robot[]) BlueRobots.Clone(),
+                YellowRobots = (Robot[]) YellowRobots.Clone(),
             };
         }
 
@@ -111,6 +114,7 @@ namespace Referee.Simuro5v5
             {
                 {102.5d, 0, -90}, {81.2d, -48, 180}, {81.2d, 48, 180}, {29.8d, -48, 180}, {29.8d, 48, 180}
             };
+
             Robot InitRobot(Robot rb, double[,] data, int elem)
             {
                 rb.pos.x = data[elem, 0];
@@ -120,10 +124,12 @@ namespace Referee.Simuro5v5
                 rb.linearVelocity = Vector2D.Zero;
                 return rb;
             }
+
             Robot[] InitMe(IEnumerable<Robot> rbs, double[,] data)
             {
                 return rbs.Select((rb, i) => InitRobot(rb, data, i)).ToArray();
             }
+
             info.YellowRobots = InitMe(info.YellowRobots, yellowData);
             info.BlueRobots = InitMe(info.BlueRobots, blueData);
 
@@ -136,14 +142,14 @@ namespace Referee.Simuro5v5
         /// <param name="matchInfo"></param>
         public void UpdateFrom(MatchInfo matchInfo)
         {
-            BlueRobots = (Robot[])matchInfo.BlueRobots.Clone();
-            YellowRobots = (Robot[])matchInfo.YellowRobots.Clone();
+            BlueRobots = (Robot[]) matchInfo.BlueRobots.Clone();
+            YellowRobots = (Robot[]) matchInfo.YellowRobots.Clone();
             Ball = matchInfo.Ball;
 
             Score = matchInfo.Score;
             TickMatch = matchInfo.TickMatch;
             MatchPhase = matchInfo.MatchPhase;
-            Referee = (Referee)matchInfo.Referee.Clone();
+            Referee = (Referee) matchInfo.Referee.Clone();
         }
 
         /// <summary>
@@ -154,8 +160,8 @@ namespace Referee.Simuro5v5
         /// <param name="ball"></param>
         public void UpdateFrom(Robot[] blue, Robot[] yellow, Ball ball)
         {
-            BlueRobots = (Robot[])blue.Clone();
-            YellowRobots = (Robot[])yellow.Clone();
+            BlueRobots = (Robot[]) blue.Clone();
+            YellowRobots = (Robot[]) yellow.Clone();
             Ball = ball;
         }
 
@@ -164,10 +170,10 @@ namespace Referee.Simuro5v5
             switch (side)
             {
                 case Side.Blue:
-                    BlueRobots = (Robot[])robots.Clone();
+                    BlueRobots = (Robot[]) robots.Clone();
                     break;
                 case Side.Yellow:
-                    YellowRobots = (Robot[])robots.Clone();
+                    YellowRobots = (Robot[]) robots.Clone();
                     break;
             }
         }
@@ -176,7 +182,7 @@ namespace Referee.Simuro5v5
         {
             Ball = ball;
         }
-        
+
         /// <summary>
         /// 满足右攻假设，获取双方在*蓝方*视角下的SideInfo
         /// 首先根据当前信息构造SideInfo，然后如果需要的是黄方数据，为了满足右攻假设，进行视角的转换
@@ -198,14 +204,14 @@ namespace Referee.Simuro5v5
             {
                 (home, opp) = (YellowRobots, BlueRobots);
             }
-            si.home = (Robot[])home.Clone();
+
+            si.home = (Robot[]) home.Clone();
             si.opp = (from rb in opp
-                      select new OpponentRobot { pos = rb.pos, rotation = rb.rotation }).ToArray();
+                select new OpponentRobot {pos = rb.pos, rotation = rb.rotation}).ToArray();
             if (side == Side.Yellow) si.ConvertToAnotherSide();
             si.TickMatch = TickMatch;
             return si;
         }
-        
     }
 
     public struct MatchScore
@@ -267,22 +273,22 @@ namespace Referee.Simuro5v5
         public Robot[] Robots = new Robot[Const.RobotsPerTeam];
         public Ball Ball = new Ball();
 
-        public  void PlacementInfoFromMatchInfo(MatchInfo matchInfo,Side side)
+        public void PlacementInfoFromMatchInfo(MatchInfo matchInfo, Side side)
         {
             Ball = matchInfo.Ball;
-            if(side == Side.Blue)
+            if (side == Side.Blue)
             {
-                Robots = (Robot[])matchInfo.BlueRobots.Clone();
+                Robots = (Robot[]) matchInfo.BlueRobots.Clone();
             }
-            else if(side == Side.Yellow)
+            else if (side == Side.Yellow)
             {
-                Robots = (Robot[])matchInfo.YellowRobots.Clone();
+                Robots = (Robot[]) matchInfo.YellowRobots.Clone();
             }
             else
             {
-                
             }
         }
+
         public void Normalize()
         {
             // TODO 保证不会出界、不会重叠
@@ -293,8 +299,9 @@ namespace Referee.Simuro5v5
                     Const.Field.Left - 10 * i + 1,
                     Const.Field.Top - 10 * i + 1,
                     Const.Field.Bottom - 10 * i + 1
-                    );
+                );
             }
+
             Ball.Normalize();
         }
 
@@ -325,7 +332,9 @@ namespace Referee.Simuro5v5
     {
         public Wheel[] Wheels = new Wheel[Const.RobotsPerTeam];
 
-        public WheelInfo() { }
+        public WheelInfo()
+        {
+        }
 
         public void Normalize()
         {
@@ -335,20 +344,20 @@ namespace Referee.Simuro5v5
             }
         }
     }
-    
+
     public struct Vector2D
     {
         public double x;
         public double y;
 
         public static Vector2D Zero => new Vector2D();
-        
-        public Vector2D(double x , double y)
+
+        public Vector2D(double x, double y)
         {
             this.x = x;
             this.y = y;
         }
-        
+
         public void ClampToRect(double right, double left, double top, double bottom)
         {
             // normalize to the specified box
@@ -360,7 +369,7 @@ namespace Referee.Simuro5v5
             {
                 x = right;
             }
-            
+
             if (y < bottom)
             {
                 y = bottom;
@@ -370,7 +379,7 @@ namespace Referee.Simuro5v5
                 y = top;
             }
         }
-        
+
         public void ClampToField()
         {
             ClampToRect(Const.Field.Right, Const.Field.Left, Const.Field.Top, Const.Field.Bottom);
@@ -415,7 +424,7 @@ namespace Referee.Simuro5v5
         {
             return x * rhs.y - y * rhs.x;
         }
-        
+
         public bool Equals(Vector2D rhs)
         {
             if (x == rhs.x && y == rhs.y)
@@ -424,11 +433,11 @@ namespace Referee.Simuro5v5
                 return false;
         }
 
-        public static double Distance (Vector2D lhs, Vector2D rhs)
+        public static double Distance(Vector2D lhs, Vector2D rhs)
         {
-            return (double)Math.Sqrt(Math.Pow(lhs.x - rhs.x, 2) + Math.Pow(lhs.y - rhs.y, 2));
+            return (double) Math.Sqrt(Math.Pow(lhs.x - rhs.x, 2) + Math.Pow(lhs.y - rhs.y, 2));
         }
-        
+
         /// <summary>
         /// 旋转向量
         /// </summary>
@@ -437,11 +446,11 @@ namespace Referee.Simuro5v5
         public Vector2D Rotate(double angle)
         {
             return new Vector2D(
-                (double)(x * Math.Cos(angle) - y * Math.Sin(angle)),
-                (double)(x * Math.Sin(angle) + y * Math.Cos(angle)));
+                (double) (x * Math.Cos(angle) - y * Math.Sin(angle)),
+                (double) (x * Math.Sin(angle) + y * Math.Cos(angle)));
         }
     }
-    
+
     public struct Wheel
     {
         public double left;
@@ -457,7 +466,7 @@ namespace Referee.Simuro5v5
             {
                 left = Const.MaxWheelVelocity;
             }
-            
+
             if (right < Const.MinWheelVelocity)
             {
                 right = Const.MinWheelVelocity;
@@ -574,7 +583,7 @@ namespace Referee.Simuro5v5
 
         public static ResultType ToAnother(this ResultType resultType)
         {
-            switch(resultType)
+            switch (resultType)
             {
                 case ResultType.FreeKickLeftBot:
                     return ResultType.FreeKickRightTop;

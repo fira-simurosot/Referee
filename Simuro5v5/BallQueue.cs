@@ -10,13 +10,10 @@ namespace Referee.Simuro5v5
         private readonly int Capacity = 10 * Const.FramePerSecond;
         private double LimitMove = 1.5 * Const.Robot.RL;
 
-        Vector2D[] testpos;
-
         public BallQueue()
         {
             //660拍，10秒的
             BallPosQueue = new Queue<Vector2D>(Capacity);
-            testpos = new Vector2D[Capacity];
         }
 
         public void Enqueue(Vector2D ballPos)
