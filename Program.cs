@@ -331,8 +331,8 @@ namespace Referee
                     y = environment.Frame.Ball.Y
                 }
             };
-            matchInfo.BlueRobots = new[] {robot[0], robot[1], robot[2], robot[3], robot[4]};
-            matchInfo.YellowRobots = new[] {robot[5], robot[6], robot[7], robot[8], robot[9]};
+            matchInfo.BlueRobots = robot.Take(5).ToArray();
+            matchInfo.YellowRobots = robot.Skip(5).ToArray();
         }
 
         //Message type conversion
@@ -374,11 +374,7 @@ namespace Referee
             {
                 Cmd = new Commands
                 {
-                    RobotCommands =
-                    {
-                        commands[0], commands[1], commands[2], commands[3], commands[4],
-                        commands[5], commands[6], commands[7], commands[8], commands[9]
-                    }
+                    RobotCommands = { commands }
                 }
             };
         }
