@@ -3,10 +3,10 @@ using System.Linq;
 using FiraMessage;
 using FiraMessage.SimToRef;
 using FiraMessage.RefToCli;
-using Google.Protobuf.Collections;
 using Grpc.Core;
 using Referee.Simuro5v5;
 using Ball = Referee.Simuro5v5.Ball;
+using Environment = FiraMessage.SimToRef.Environment;
 using Robot = Referee.Simuro5v5.Robot;
 using Side = FiraMessage.RefToCli.Side;
 
@@ -18,6 +18,7 @@ namespace Referee
     {
         static void Main(string[] args)
         {
+            // Get gRPC client
             Console.WriteLine("This project is still in early stage");
             Channel channel = new Channel("127.0.0.1:50051", ChannelCredentials.Insecure);
             var blueChannel = new Channel("127.0.0.1:50052", ChannelCredentials.Insecure);
@@ -26,15 +27,14 @@ namespace Referee
             var blueClient = new FiraMessage.RefToCli.Referee.RefereeClient(blueChannel);
             var yellowClient = new FiraMessage.RefToCli.Referee.RefereeClient(yellowChannel);
 
-            FiraMessage.RefToCli.TeamInfo teamInfo = new FiraMessage.RefToCli.TeamInfo();
-            teamInfo.Color = Color.B;
-            var blueName = blueClient.Register(teamInfo);
-            teamInfo.Color = Color.Y;
-            var yellowName = yellowClient.Register(teamInfo);
+            // Register strategy
+            var blueTeamInfo = new FiraMessage.RefToCli.TeamInfo {Color = Color.B};
+            var blueName = blueClient.Register(blueTeamInfo);
+            var yellowTeamInfo = new FiraMessage.RefToCli.TeamInfo {Color = Color.Y};
+            var yellowName = yellowClient.Register(yellowTeamInfo);
 
-            MatchInfo matchInfo = new MatchInfo();
-            FiraMessage.SimToRef.Environment replySimulate = new FiraMessage.SimToRef.Environment();
-            InitSimEnvironment(ref replySimulate);
+            var matchInfo = new MatchInfo();
+            var simulationReply = InitSimEnvironment();
             bool isSecondHalf = false;
             while (true)
             {
@@ -48,10 +48,10 @@ namespace Referee
                     case ResultType.NormalMatch:
                     {
                         var replyBlueClientCommand =
-                            blueClient.RunStrategy(SimEnvironment2CliEnvironment(replySimulate, info));
+                            blueClient.RunStrategy(SimEnvironment2CliEnvironment(simulationReply, info));
                         var replyYellowClientCommand =
-                            yellowClient.RunStrategy(YellowRight(SimEnvironment2CliEnvironment(replySimulate, info)));
-                        replySimulate =
+                            yellowClient.RunStrategy(YellowRight(SimEnvironment2CliEnvironment(simulationReply, info)));
+                        simulationReply =
                             clientSimulate.Simulate(CliCommand2Packet(replyBlueClientCommand,
                                 replyYellowClientCommand, isSecondHalf));
                         break;
@@ -91,7 +91,7 @@ namespace Referee
                     case ResultType.FreeKickLeftTop:
                     case ResultType.FreeKickLeftBot:
                     {
-                        var sendClient = SimEnvironment2CliEnvironment(replySimulate, info);
+                        var sendClient = SimEnvironment2CliEnvironment(simulationReply, info);
                         FiraMessage.Ball replyClientBall;
                         Robots replyBlueClientRobots;
                         Robots replyYellowClientRobots;
@@ -136,7 +136,7 @@ namespace Referee
 
                         CliEnvironment2MatchInfo(sendClient, ref matchInfo);
                         matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, judgeResult.Actor);
-                        replySimulate = clientSimulate.Simulate(MatchInfo2Packet(matchInfo, isSecondHalf));
+                        simulationReply = clientSimulate.Simulate(MatchInfo2Packet(matchInfo, isSecondHalf));
                         break;
                     }
                     default:
@@ -145,10 +145,10 @@ namespace Referee
 
                 if (isSecondHalf)
                 {
-                    SecondHalfTransform(ref replySimulate);
+                    SecondHalfTransform(ref simulationReply);
                 }
 
-                SimEnvironment2MatchInfo(replySimulate, ref matchInfo);
+                SimEnvironment2MatchInfo(simulationReply, ref matchInfo);
                 matchInfo.TickMatch++;
                 matchInfo.TickPhase++;
             }
@@ -174,9 +174,10 @@ namespace Referee
             channel.ShutdownAsync().Wait();
         }
 
-        //Initialization FiraMessage.SimToRef.Environment
-        private static void InitSimEnvironment(ref FiraMessage.SimToRef.Environment simEnvironment)
+        ///Initialization FiraMessage.SimToRef.Environment
+        private static Environment InitSimEnvironment()
         {
+            var simEnvironment = new FiraMessage.SimToRef.Environment();
             double[] blueX = {30, 80, 95, 80, 30};
             double[] blueY = {60, 60, 0, -60, -60};
             double[] yellowX = {-30, -80, -95, -80, -30};
@@ -191,9 +192,11 @@ namespace Referee
                 simEnvironment.Frame.RobotsYellow.Add(new FiraMessage.Robot
                     {RobotId = (uint) i, X = yellowX[i], Y = yellowY[i], Orientation = 0});
             }
+
+            return simEnvironment;
         }
 
-        //Message type conversion
+        ///Message type conversion
         private static FoulInfo RefereeState(JudgeResult judgeResult, MatchInfo matchInfo)
         {
             //Don't use FoulInfo.Types.PhaseType.Stopped.
@@ -227,7 +230,7 @@ namespace Referee
             return info;
         }
 
-        //Get the ball position corresponding to the foul type
+        ///Get the ball position corresponding to the foul type
         private static FiraMessage.Ball FoulBallPosition(FoulInfo info, JudgeResult judgeResult)
         {
             FiraMessage.Ball replyClientBall = new FiraMessage.Ball();
@@ -280,7 +283,7 @@ namespace Referee
             return replyClientBall;
         }
 
-        //Message type conversion
+        ///Message type conversion
         private static void SimEnvironment2MatchInfo(FiraMessage.SimToRef.Environment environment,
             ref MatchInfo matchInfo)
         {
@@ -335,7 +338,7 @@ namespace Referee
             matchInfo.YellowRobots = robot.Skip(5).ToArray();
         }
 
-        //Message type conversion
+        ///Message type conversion
         private static FiraMessage.RefToCli.Environment SimEnvironment2CliEnvironment(
             FiraMessage.SimToRef.Environment simEnvironment, FoulInfo info)
         {
@@ -346,7 +349,7 @@ namespace Referee
             };
         }
 
-        //Message type conversion
+        ///Message type conversion
         private static Packet CliCommand2Packet(FiraMessage.RefToCli.Command blueCommand,
             FiraMessage.RefToCli.Command yellowCommand, bool isSecondHalf)
         {
@@ -379,14 +382,14 @@ namespace Referee
             };
         }
 
-        //Update message after receiving positioning message
+        ///Update message after receiving positioning message
         private static void UpdateCliEnvironment(ref FiraMessage.RefToCli.Environment cliEnvironment,
             FiraMessage.Ball ball)
         {
             cliEnvironment.Frame.Ball = ball;
         }
 
-        //Update message after receiving positioning message
+        ///Update message after receiving positioning message
         private static void UpdateCliEnvironment(ref FiraMessage.RefToCli.Environment cliEnvironment, Robots robots,
             bool isYellow)
         {
@@ -408,7 +411,7 @@ namespace Referee
             }
         }
 
-        //Message type conversion
+        ///Message type conversion
         private static void CliEnvironment2MatchInfo(FiraMessage.RefToCli.Environment cliEnvironment,
             ref MatchInfo matchInfo)
         {
@@ -440,7 +443,7 @@ namespace Referee
             matchInfo.YellowRobots = robotYellow;
         }
 
-        //Message type conversion
+        ///Message type conversion
         private static Packet MatchInfo2Packet(MatchInfo matchInfo, bool isSecondHalf)
         {
             double flag = isSecondHalf ? -1 : 1;
@@ -513,7 +516,7 @@ namespace Referee
             };
         }
 
-        //In the second half of the game, the information of the two teams will be converted before the information of the simulation is transmitted.
+        ///In the second half of the game, the information of the two teams will be converted before the information of the simulation is transmitted.
         private static void SecondHalfTransform(ref FiraMessage.SimToRef.Environment replySimulate)
         {
             var clone = replySimulate;
@@ -547,7 +550,7 @@ namespace Referee
             };
         }
 
-        //Before transmitting information to the Yellow client, the coordinates are converted to yellow on the right and blue on the left.
+        ///Before transmitting information to the Yellow client, the coordinates are converted to yellow on the right and blue on the left.
         private static FiraMessage.RefToCli.Environment YellowRight(FiraMessage.RefToCli.Environment cliEnvironment)
         {
             return new FiraMessage.RefToCli.Environment
@@ -584,14 +587,14 @@ namespace Referee
             };
         }
 
-        //The coordinates of the positioning information received from the Yellow client are converted to blue on the right and yellow on the left
+        ///The coordinates of the positioning information received from the Yellow client are converted to blue on the right and yellow on the left
         private static void YellowLeft(ref FiraMessage.Ball ball)
         {
             ball.X = -ball.X;
             ball.Y = -ball.Y;
         }
 
-        //The coordinates of the positioning information received from the Yellow client are converted to blue on the right and yellow on the left
+        ///The coordinates of the positioning information received from the Yellow client are converted to blue on the right and yellow on the left
         private static void YellowLeft(ref Robots robots)
         {
             robots = new Robots
