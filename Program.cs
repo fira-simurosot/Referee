@@ -16,7 +16,7 @@ namespace Referee
 {
     class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             // Get gRPC client
             Console.WriteLine("This project is still in early stage");
@@ -38,15 +38,17 @@ namespace Referee
             bool isSecondHalf = false;
             while (true)
             {
-                Console.Out.WriteLine("matchInfo.TickPhase = {0}", matchInfo.TickPhase);
-                Console.Out.WriteLine("matchInfo.TickMatch = {0}", matchInfo.TickMatch);
+                Console.WriteLine("matchInfo.TickPhase = {0}", matchInfo.TickPhase);
+                Console.WriteLine("matchInfo.TickMatch = {0}", matchInfo.TickMatch);
 
+                // Get JudgeResult from the judge
                 var judgeResult = matchInfo.Referee.Judge(matchInfo);
-                FoulInfo info = RefereeState(judgeResult, matchInfo);
+                FoulInfo info = ExtractFoulInfo(judgeResult, matchInfo);
                 switch (judgeResult.ResultType)
                 {
                     case ResultType.NormalMatch:
                     {
+                        // The game continues, move to next frame
                         var replyBlueClientCommand =
                             blueClient.RunStrategy(SimEnvironment2CliEnvironment(simulationReply, info));
                         var replyYellowClientCommand =
@@ -174,17 +176,19 @@ namespace Referee
             channel.ShutdownAsync().Wait();
         }
 
-        ///Initialization FiraMessage.SimToRef.Environment
+        /// Get Initialization of FiraMessage.SimToRef.Environment
         private static Environment InitSimEnvironment()
         {
-            var simEnvironment = new FiraMessage.SimToRef.Environment();
             double[] blueX = {30, 80, 95, 80, 30};
             double[] blueY = {60, 60, 0, -60, -60};
             double[] yellowX = {-30, -80, -95, -80, -30};
             double[] yellowY = {60, 60, 0, -60, -60};
-            simEnvironment.Step = 0;
-            simEnvironment.Field = new Field();
-            simEnvironment.Frame = new Frame();
+
+            var simEnvironment = new FiraMessage.SimToRef.Environment
+            {
+                Step = 0, Field = new Field(), Frame = new Frame()
+            };
+            
             for (int i = 0; i < 5; i++)
             {
                 simEnvironment.Frame.RobotsBlue.Add(new FiraMessage.Robot
@@ -196,10 +200,10 @@ namespace Referee
             return simEnvironment;
         }
 
-        ///Message type conversion
-        private static FoulInfo RefereeState(JudgeResult judgeResult, MatchInfo matchInfo)
+        /// Extract <see cref="FoulInfo"/> from inner <see cref="JudgeResult"/> type
+        private static FoulInfo ExtractFoulInfo(JudgeResult judgeResult, MatchInfo matchInfo)
         {
-            //Don't use FoulInfo.Types.PhaseType.Stopped.
+            // Don't use FoulInfo.Types.PhaseType.Stopped.
             FoulInfo info = new FoulInfo
             {
                 Actor = Side.Self,
@@ -338,7 +342,8 @@ namespace Referee
             matchInfo.YellowRobots = robot.Skip(5).ToArray();
         }
 
-        ///Message type conversion
+        /// Convert Sim <see cref="FiraMessage.SimToRef.Environment"/>
+        /// to Cli <see cref="FiraMessage.RefToCli.Environment"/>
         private static FiraMessage.RefToCli.Environment SimEnvironment2CliEnvironment(
             FiraMessage.SimToRef.Environment simEnvironment, FoulInfo info)
         {
