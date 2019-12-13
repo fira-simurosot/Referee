@@ -38,8 +38,6 @@ namespace Referee
             bool isSecondHalf = false;
             while (true)
             {
-                Console.WriteLine("matchInfo.TickPhase = {0}", matchInfo.TickPhase);
-                Console.WriteLine("matchInfo.TickMatch = {0}", matchInfo.TickMatch);
                 //TODO:just for test
                 Console.Out.WriteLine("MatchPhase = {0}", matchInfo.MatchPhase);
                 Console.Out.WriteLine("matchInfo.TickPhase = {0}", matchInfo.TickPhase);
@@ -58,13 +56,16 @@ namespace Referee
                     case ResultType.NormalMatch:
                     {
                         // The game continues, move to next frame
+                        var temp = SimEnvironment2CliEnvironment(simulationReply, info);
                         var replyBlueClientCommand =
-                            blueClient.RunStrategy(SimEnvironment2CliEnvironment(simulationReply, info));
+                            blueClient.RunStrategy(temp);
+                        temp = YellowRight(SimEnvironment2CliEnvironment(simulationReply, info));
                         var replyYellowClientCommand =
-                            yellowClient.RunStrategy(YellowRight(SimEnvironment2CliEnvironment(simulationReply, info)));
+                            yellowClient.RunStrategy(temp);
                         simulationReply =
-                            clientSimulate.Simulate(CliCommand2Packet(replyBlueClientCommand,
-                                replyYellowClientCommand, isSecondHalf));
+                            Test(CliCommand2Packet(replyBlueClientCommand, replyYellowClientCommand, isSecondHalf), simulationReply);
+                        //clientSimulate.Simulate(CliCommand2Packet(replyBlueClientCommand,
+                        //    replyYellowClientCommand, isSecondHalf));
                         break;
                     }
                     case ResultType.NextPhase:
@@ -147,7 +148,9 @@ namespace Referee
 
                         CliEnvironment2MatchInfo(sendClient, ref matchInfo);
                         matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, judgeResult.Actor);
-                        simulationReply = clientSimulate.Simulate(MatchInfo2Packet(matchInfo, isSecondHalf));
+                        //TODO: just for test
+                        simulationReply = Test(MatchInfo2Packet(matchInfo, isSecondHalf), simulationReply);
+                        //clientSimulate.Simulate(MatchInfo2Packet(matchInfo, isSecondHalf));
                         break;
                     }
                     default:
@@ -193,11 +196,11 @@ namespace Referee
             double[] yellowX = {-30, -80, -95, -80, -30};
             double[] yellowY = {60, 60, 0, -60, -60};
 
-            var simEnvironment = new FiraMessage.SimToRef.Environment
+            var simEnvironment = new Environment
             {
                 Step = 0, Field = new Field(), Frame = new Frame()
             };
-            
+
             for (int i = 0; i < 5; i++)
             {
                 simEnvironment.Frame.RobotsBlue.Add(new FiraMessage.Robot
@@ -297,7 +300,7 @@ namespace Referee
         }
 
         ///Message type conversion
-        private static void SimEnvironment2MatchInfo(FiraMessage.SimToRef.Environment environment,
+        private static void SimEnvironment2MatchInfo(Environment environment,
             ref MatchInfo matchInfo)
         {
             /*var matchPhase = MatchPhase.FirstHalf;
@@ -354,7 +357,7 @@ namespace Referee
         /// Convert Sim <see cref="FiraMessage.SimToRef.Environment"/>
         /// to Cli <see cref="FiraMessage.RefToCli.Environment"/>
         private static FiraMessage.RefToCli.Environment SimEnvironment2CliEnvironment(
-            FiraMessage.SimToRef.Environment simEnvironment, FoulInfo info)
+            Environment simEnvironment, FoulInfo info)
         {
             return new FiraMessage.RefToCli.Environment
             {
@@ -378,7 +381,7 @@ namespace Referee
                     WheelLeft = blueCommand.Wheels[i].Left,
                     WheelRight = blueCommand.Wheels[i].Right
                 };
-                
+
                 commandYellow[yellowCommand.Wheels[i].RobotId] = new FiraMessage.SimToRef.Command
                 {
                     Yellowteam = !isSecondHalf,
@@ -532,7 +535,7 @@ namespace Referee
         }
 
         ///In the second half of the game, the information of the two teams will be converted before the information of the simulation is transmitted.
-        private static void SecondHalfTransform(ref FiraMessage.SimToRef.Environment replySimulate)
+        private static void SecondHalfTransform(ref Environment replySimulate)
         {
             var clone = replySimulate;
             replySimulate.Frame = new Frame
@@ -628,25 +631,6 @@ namespace Referee
         }
 
         //TODO: just for test
-        private static Robots RobotsTest(FiraMessage.RefToCli.Environment sendClient)
-        {
-            Random random = new Random();
-            FiraMessage.Robot[] robot = new FiraMessage.Robot[5];
-            for (int i = 0; i < 5; i++)
-            {
-                robot[i] = new FiraMessage.Robot();
-                robot[i].RobotId = (uint) i;
-                robot[i].Orientation = 360.0 * random.NextDouble() - 180.0;
-                robot[i].X = 200.0 * random.NextDouble() - 100.0;
-                robot[i].Y = 160.0 * random.NextDouble() - 80.0;
-            }
-
-            return new Robots
-            {
-                Robots_ = {robot}
-            };
-        }
-
         private static double Test(double x, double min, double max, bool flag = false)
         {
             if (flag)
@@ -677,8 +661,8 @@ namespace Referee
             return x;
         }
 
-        private static FiraMessage.SimToRef.Environment Test(Packet packet, 
-            FiraMessage.SimToRef.Environment simEnvironment = null)
+        private static Environment Test(Packet packet,
+            Environment simEnvironment = null)
         {
             Random random = new Random();
             if (packet.Replace != null)
@@ -704,10 +688,10 @@ namespace Referee
                         robotYellow[k++].Orientation = packet.Replace.Robots[i].Position.Orientation;
                     }
                 }
-                
-                return new FiraMessage.SimToRef.Environment
+
+                return new Environment
                 {
-                    Step = (uint)random.Next(66 * 5 * 60),
+                    Step = (uint) random.Next(66 * 5 * 60),
                     Field = new Field(),
                     Frame = new Frame
                     {
@@ -722,6 +706,7 @@ namespace Referee
                     }
                 };
             }
+            return simEnvironment;
 
             if (packet.Cmd != null)
             {
@@ -742,46 +727,21 @@ namespace Referee
                 {
                     simEnvironment.Frame.RobotsBlue[i].X = Test(simEnvironment.Frame.RobotsBlue[i].X, -110.0, 110.0);
                     simEnvironment.Frame.RobotsBlue[i].Y = Test(simEnvironment.Frame.RobotsBlue[i].Y, -90.0, 90.0);
-                    simEnvironment.Frame.RobotsBlue[i].Orientation = Test(simEnvironment.Frame.RobotsBlue[i].Orientation,
+                    simEnvironment.Frame.RobotsBlue[i].Orientation = Test(
+                        simEnvironment.Frame.RobotsBlue[i].Orientation,
                         -180.0, 180.0, true);
-                    simEnvironment.Frame.RobotsYellow[i].X = Test(simEnvironment.Frame.RobotsYellow[i].X, -110.0, 110.0);
+                    simEnvironment.Frame.RobotsYellow[i].X =
+                        Test(simEnvironment.Frame.RobotsYellow[i].X, -110.0, 110.0);
                     simEnvironment.Frame.RobotsYellow[i].Y = Test(simEnvironment.Frame.RobotsYellow[i].Y, -90.0, 90.0);
                     simEnvironment.Frame.RobotsYellow[i].Orientation = Test(
                         simEnvironment.Frame.RobotsYellow[i].Orientation,
                         -180.0, 180.0, true);
                 }
+
                 return simEnvironment;
             }
-            
+
             throw new ArgumentException();
-        }
-
-        private static FiraMessage.RefToCli.Command CommandTest(FiraMessage.RefToCli.Environment cliEnvironment)
-        {
-            Random random = new Random();
-            FiraMessage.RefToCli.Command command = new FiraMessage.RefToCli.Command();
-            for (int i = 0; i < 5; i++)
-            {
-                WheelSpeed wheelSpeed = new WheelSpeed
-                {
-                    RobotId =  i,
-                    Left = (float)(250.0 * random.NextDouble() - 125.0),
-                    Right = (float)(250.0 * random.NextDouble() - 125.0)
-                };
-                command.Wheels.Add(wheelSpeed);
-            }
-            return command;
-        }
-
-        private static FiraMessage.Ball BallTest(FiraMessage.RefToCli.Environment sendClient)
-        {
-            Random random = new Random();
-            return new FiraMessage.Ball
-            {
-                X = 20.0 * random.NextDouble() + 70.0,
-                Y = 60.0 * random.NextDouble() - 30.0,
-                Z = 0.0
-            };
         }
     }
 }
