@@ -14,16 +14,16 @@ using Side = FiraMessage.RefToCli.Side;
 
 namespace Referee
 {
-    class Program
+    static class Program
     {
         private static void Main(string[] args)
         {
             // Get gRPC client
             Console.WriteLine("This project is still in early stage");
-            Channel channel = new Channel("127.0.0.1:50051", ChannelCredentials.Insecure);
+            var simulationChannel = new Channel("127.0.0.1:50051", ChannelCredentials.Insecure);
             var blueChannel = new Channel("127.0.0.1:50052", ChannelCredentials.Insecure);
             var yellowChannel = new Channel("127.0.0.1:50053", ChannelCredentials.Insecure);
-            var clientSimulate = new Simulate.SimulateClient(channel);
+            var clientSimulate = new Simulate.SimulateClient(simulationChannel);
             var blueClient = new FiraMessage.RefToCli.Referee.RefereeClient(blueChannel);
             var yellowClient = new FiraMessage.RefToCli.Referee.RefereeClient(yellowChannel);
 
@@ -56,15 +56,13 @@ namespace Referee
                     case ResultType.NormalMatch:
                     {
                         // The game continues, move to next frame
-                        var temp = SimEnvironment2CliEnvironment(simulationReply, info);
-                        var replyBlueClientCommand =
-                            blueClient.RunStrategy(temp);
-                        temp = ConvertToRight(SimEnvironment2CliEnvironment(simulationReply, info));
-                        var replyYellowClientCommand =
-                            yellowClient.RunStrategy(temp);
+                        var cliEnvironment = EnvironmentSimToCli(simulationReply, info);
+                        var blueClientCommandReply = blueClient.RunStrategy(cliEnvironment);
+                        cliEnvironment = ConvertToRight(EnvironmentSimToCli(simulationReply, info));
+                        var yellowClientCommandReply = yellowClient.RunStrategy(cliEnvironment);
                         simulationReply =
-                            Test(CliCommand2Packet(replyBlueClientCommand, replyYellowClientCommand, isSecondHalf), simulationReply);
-                        //clientSimulate.Simulate(CliCommand2Packet(replyBlueClientCommand,
+                            Test(CommandCliToSim(blueClientCommandReply, yellowClientCommandReply, isSecondHalf), simulationReply);
+                        //clientSimulate.Simulate(CommandCliToSim(replyBlueClientCommand,
                         //    replyYellowClientCommand, isSecondHalf));
                         break;
                     }
@@ -103,7 +101,7 @@ namespace Referee
                     case ResultType.FreeKickLeftTop:
                     case ResultType.FreeKickLeftBot:
                     {
-                        var sendClient = SimEnvironment2CliEnvironment(simulationReply, info);
+                        var sendClient = EnvironmentSimToCli(simulationReply, info);
                         FiraMessage.Ball replyClientBall;
                         Robots replyBlueClientRobots;
                         Robots replyYellowClientRobots;
@@ -185,7 +183,7 @@ namespace Referee
 
             blueChannel.ShutdownAsync().Wait();
             yellowChannel.ShutdownAsync().Wait();
-            channel.ShutdownAsync().Wait();
+            simulationChannel.ShutdownAsync().Wait();
         }
 
         /// Get Initialization of FiraMessage.SimToRef.Environment
@@ -356,7 +354,7 @@ namespace Referee
 
         /// Convert Sim <see cref="FiraMessage.SimToRef.Environment"/>
         /// to Cli <see cref="FiraMessage.RefToCli.Environment"/>
-        private static FiraMessage.RefToCli.Environment SimEnvironment2CliEnvironment(
+        private static FiraMessage.RefToCli.Environment EnvironmentSimToCli(
             Environment simEnvironment, FoulInfo info)
         {
             return new FiraMessage.RefToCli.Environment
@@ -367,7 +365,7 @@ namespace Referee
         }
 
         ///Message type conversion
-        private static Packet CliCommand2Packet(FiraMessage.RefToCli.Command blueCommand,
+        private static Packet CommandCliToSim(FiraMessage.RefToCli.Command blueCommand,
             FiraMessage.RefToCli.Command yellowCommand, bool isSecondHalf)
         {
             FiraMessage.SimToRef.Command[] commandBlue = new FiraMessage.SimToRef.Command[5];
