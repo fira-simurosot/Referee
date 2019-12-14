@@ -38,7 +38,7 @@ namespace Referee
             bool isSecondHalf = false;
             while (true)
             {
-                //TODO:just for test
+                //TODO: just for test
                 Console.Out.WriteLine("MatchPhase = {0}", matchInfo.MatchPhase);
                 Console.Out.WriteLine("matchInfo.TickPhase = {0}", matchInfo.TickPhase);
                 Console.Out.WriteLine("matchInfo.TickMatch = {0}", matchInfo.TickMatch);
@@ -59,7 +59,7 @@ namespace Referee
                         var temp = SimEnvironment2CliEnvironment(simulationReply, info);
                         var replyBlueClientCommand =
                             blueClient.RunStrategy(temp);
-                        temp = YellowRight(SimEnvironment2CliEnvironment(simulationReply, info));
+                        temp = ConvertToRight(SimEnvironment2CliEnvironment(simulationReply, info));
                         var replyYellowClientCommand =
                             yellowClient.RunStrategy(temp);
                         simulationReply =
@@ -116,8 +116,8 @@ namespace Referee
                                 replyClientBall = blueClient.SetBall(sendClient);
                                 break;
                             case Simuro5v5.Side.Yellow:
-                                replyClientBall = yellowClient.SetBall(YellowRight(sendClient));
-                                YellowLeft(ref replyClientBall);
+                                replyClientBall = yellowClient.SetBall(ConvertToRight(sendClient));
+                                ConvertFromRight(ref replyClientBall);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
@@ -130,13 +130,13 @@ namespace Referee
                                 replyBlueClientRobots = blueClient.SetFormerRobots(sendClient);
                                 sendClient.FoulInfo.Actor = Side.Opponent;
                                 UpdateCliEnvironment(ref sendClient, replyBlueClientRobots, false);
-                                replyYellowClientRobots = yellowClient.SetLaterRobots(YellowRight(sendClient));
-                                YellowLeft(ref replyYellowClientRobots);
+                                replyYellowClientRobots = yellowClient.SetLaterRobots(ConvertToRight(sendClient));
+                                ConvertFromRight(ref replyYellowClientRobots);
                                 UpdateCliEnvironment(ref sendClient, replyYellowClientRobots, true);
                                 break;
                             case Simuro5v5.Side.Yellow:
-                                replyYellowClientRobots = yellowClient.SetFormerRobots(YellowRight(sendClient));
-                                YellowLeft(ref replyYellowClientRobots);
+                                replyYellowClientRobots = yellowClient.SetFormerRobots(ConvertToRight(sendClient));
+                                ConvertFromRight(ref replyYellowClientRobots);
                                 sendClient.FoulInfo.Actor = Side.Opponent;
                                 UpdateCliEnvironment(ref sendClient, replyYellowClientRobots, true);
                                 replyBlueClientRobots = blueClient.SetLaterRobots(sendClient);
@@ -171,12 +171,12 @@ namespace Referee
             if (matchInfo.Score.BlueScore > matchInfo.Score.YellowScore)
             {
                 blueName.Name += " Win";
-                Console.Out.WriteLine(blueName.Name);
+                Console.WriteLine(blueName.Name);
             }
             else if (matchInfo.Score.BlueScore < matchInfo.Score.YellowScore)
             {
                 yellowName.Name += " Win";
-                Console.Out.WriteLine(yellowName.Name);
+                Console.WriteLine(yellowName.Name);
             }
             else
             {
@@ -568,8 +568,9 @@ namespace Referee
             };
         }
 
-        ///Before transmitting information to the Yellow client, the coordinates are converted to yellow on the right and blue on the left.
-        private static FiraMessage.RefToCli.Environment YellowRight(FiraMessage.RefToCli.Environment cliEnvironment)
+        /// Rotate the coordinates by 180 degrees.
+        /// <para>This is done before transmitting information to the Yellow client.</para>
+        private static FiraMessage.RefToCli.Environment ConvertToRight(FiraMessage.RefToCli.Environment cliEnvironment)
         {
             return new FiraMessage.RefToCli.Environment
             {
@@ -605,15 +606,17 @@ namespace Referee
             };
         }
 
-        ///The coordinates of the positioning information received from the Yellow client are converted to blue on the right and yellow on the left
-        private static void YellowLeft(ref FiraMessage.Ball ball)
+        /// rotate the coordinates by 180 degrees.
+        /// <para>this is done after transmitting information from the yellow client.</para>
+        private static void ConvertFromRight(ref FiraMessage.Ball ball)
         {
             ball.X = -ball.X;
             ball.Y = -ball.Y;
         }
 
-        ///The coordinates of the positioning information received from the Yellow client are converted to blue on the right and yellow on the left
-        private static void YellowLeft(ref Robots robots)
+        /// rotate the coordinates by 180 degrees.
+        /// <para>this is done after transmitting information from the yellow client.</para>
+        private static void ConvertFromRight(ref Robots robots)
         {
             robots = new Robots
             {
