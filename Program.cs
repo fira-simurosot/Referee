@@ -61,7 +61,8 @@ namespace Referee
                         cliEnvironment = ConvertToRight(EnvironmentSimToCli(simulationReply, info));
                         var yellowClientCommandReply = yellowClient.RunStrategy(cliEnvironment);
                         simulationReply =
-                            Test(CommandCliToSim(blueClientCommandReply, yellowClientCommandReply, isSecondHalf), simulationReply);
+                            Test(CommandCliToSim(blueClientCommandReply, yellowClientCommandReply, isSecondHalf),
+                                simulationReply);
                         //clientSimulate.Simulate(CommandCliToSim(replyBlueClientCommand,
                         //    replyYellowClientCommand, isSecondHalf));
                         break;
@@ -128,24 +129,34 @@ namespace Referee
                                 replyBlueClientRobots = blueClient.SetFormerRobots(sendClient);
                                 sendClient.FoulInfo.Actor = Side.Opponent;
                                 UpdateCliEnvironment(ref sendClient, replyBlueClientRobots, false);
+                                CliEnvironment2MatchInfo(sendClient, ref matchInfo);
+                                matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Blue);
+                                MatchInfo2CliEnvironment(matchInfo, ref sendClient, false);
                                 replyYellowClientRobots = yellowClient.SetLaterRobots(ConvertToRight(sendClient));
                                 ConvertFromRight(ref replyYellowClientRobots);
                                 UpdateCliEnvironment(ref sendClient, replyYellowClientRobots, true);
+                                CliEnvironment2MatchInfo(sendClient, ref matchInfo);
+                                matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Yellow);
+                                MatchInfo2CliEnvironment(matchInfo, ref sendClient, true);
                                 break;
                             case Simuro5v5.Side.Yellow:
                                 replyYellowClientRobots = yellowClient.SetFormerRobots(ConvertToRight(sendClient));
                                 ConvertFromRight(ref replyYellowClientRobots);
                                 sendClient.FoulInfo.Actor = Side.Opponent;
                                 UpdateCliEnvironment(ref sendClient, replyYellowClientRobots, true);
+                                CliEnvironment2MatchInfo(sendClient, ref matchInfo);
+                                matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Yellow);
+                                MatchInfo2CliEnvironment(matchInfo, ref sendClient, true);
                                 replyBlueClientRobots = blueClient.SetLaterRobots(sendClient);
                                 UpdateCliEnvironment(ref sendClient, replyBlueClientRobots, false);
+                                CliEnvironment2MatchInfo(sendClient, ref matchInfo);
+                                matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Blue);
+                                MatchInfo2CliEnvironment(matchInfo, ref sendClient, false);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
                         }
 
-                        CliEnvironment2MatchInfo(sendClient, ref matchInfo);
-                        matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, judgeResult.Actor);
                         //TODO: just for test
                         simulationReply = Test(MatchInfo2Packet(matchInfo, isSecondHalf), simulationReply);
                         //clientSimulate.Simulate(MatchInfo2Packet(matchInfo, isSecondHalf));
@@ -411,19 +422,17 @@ namespace Referee
         {
             if (!isYellow)
             {
-                cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[0].RobotId] = robots.Robots_[0];
-                cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[1].RobotId] = robots.Robots_[1];
-                cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[2].RobotId] = robots.Robots_[2];
-                cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[3].RobotId] = robots.Robots_[3];
-                cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[4].RobotId] = robots.Robots_[4];
+                for (int i = 0; i < 5; i++)
+                {
+                    cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[i].RobotId] = robots.Robots_[i];
+                }
             }
             else
             {
-                cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[0].RobotId] = robots.Robots_[0];
-                cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[1].RobotId] = robots.Robots_[1];
-                cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[2].RobotId] = robots.Robots_[2];
-                cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[3].RobotId] = robots.Robots_[3];
-                cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[4].RobotId] = robots.Robots_[4];
+                for (int i = 0; i < 5; i++)
+                {
+                    cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[i].RobotId] = robots.Robots_[i];
+                }
             }
         }
 
@@ -457,6 +466,36 @@ namespace Referee
             };
             matchInfo.BlueRobots = robotBlue;
             matchInfo.YellowRobots = robotYellow;
+        }
+
+        ///Message type conversion
+        private static void MatchInfo2CliEnvironment(MatchInfo matchInfo,
+            ref FiraMessage.RefToCli.Environment cliEnvironment, bool isYellow)
+        {
+            if (!isYellow)
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    cliEnvironment.Frame.RobotsBlue[i].X =
+                        matchInfo.BlueRobots[cliEnvironment.Frame.RobotsBlue[i].RobotId].pos.x;
+                    cliEnvironment.Frame.RobotsBlue[i].Y =
+                        matchInfo.BlueRobots[cliEnvironment.Frame.RobotsBlue[i].RobotId].pos.y;
+                    cliEnvironment.Frame.RobotsBlue[i].Orientation =
+                        matchInfo.BlueRobots[cliEnvironment.Frame.RobotsBlue[i].RobotId].rotation;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    cliEnvironment.Frame.RobotsYellow[i].X =
+                        matchInfo.BlueRobots[cliEnvironment.Frame.RobotsYellow[i].RobotId].pos.x;
+                    cliEnvironment.Frame.RobotsYellow[i].Y =
+                        matchInfo.BlueRobots[cliEnvironment.Frame.RobotsYellow[i].RobotId].pos.y;
+                    cliEnvironment.Frame.RobotsYellow[i].Orientation =
+                        matchInfo.BlueRobots[cliEnvironment.Frame.RobotsYellow[i].RobotId].rotation;
+                }
+            }
         }
 
         ///Message type conversion
@@ -707,6 +746,7 @@ namespace Referee
                     }
                 };
             }
+
             return simEnvironment;
 
             if (packet.Cmd != null)
