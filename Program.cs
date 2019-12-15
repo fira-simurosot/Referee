@@ -34,7 +34,7 @@ namespace Referee
             var yellowName = yellowClient.Register(yellowTeamInfo);
 
             var matchInfo = new MatchInfo();
-            var simulationReply = InitSimEnvironment();
+            var environment = InitSimEnvironment();
             bool isSecondHalf = false;
             while (true)
             {
@@ -56,13 +56,15 @@ namespace Referee
                     case ResultType.NormalMatch:
                     {
                         // The game continues, move to next frame
-                        var cliEnvironment = EnvironmentSimToCli(simulationReply, info);
-                        var blueClientCommandReply = blueClient.RunStrategy(cliEnvironment);
-                        cliEnvironment = ConvertToRight(EnvironmentSimToCli(simulationReply, info));
-                        var yellowClientCommandReply = yellowClient.RunStrategy(cliEnvironment);
-                        simulationReply =
+                        var blueCliEnvironment = EnvironmentSimToCli(environment, info);
+                        var blueClientCommandReply = blueClient.RunStrategy(blueCliEnvironment);
+                        
+                        var yellowCliEnvironment = ConvertToRight(EnvironmentSimToCli(environment, info));
+                        var yellowClientCommandReply = yellowClient.RunStrategy(yellowCliEnvironment);
+                        
+                        environment =
                             Test(CommandCliToSim(blueClientCommandReply, yellowClientCommandReply, isSecondHalf),
-                                simulationReply);
+                                environment);
                         //clientSimulate.Simulate(CommandCliToSim(replyBlueClientCommand,
                         //    replyYellowClientCommand, isSecondHalf));
                         break;
@@ -102,7 +104,7 @@ namespace Referee
                     case ResultType.FreeKickLeftTop:
                     case ResultType.FreeKickLeftBot:
                     {
-                        var sendClient = EnvironmentSimToCli(simulationReply, info);
+                        var sendClient = EnvironmentSimToCli(environment, info);
                         FiraMessage.Ball replyClientBall;
                         Robots replyBlueClientRobots;
                         Robots replyYellowClientRobots;
@@ -158,7 +160,7 @@ namespace Referee
                         }
 
                         //TODO: just for test
-                        simulationReply = Test(MatchInfo2Packet(matchInfo, isSecondHalf), simulationReply);
+                        environment = Test(MatchInfo2Packet(matchInfo, isSecondHalf), environment);
                         //clientSimulate.Simulate(MatchInfo2Packet(matchInfo, isSecondHalf));
                         break;
                     }
@@ -168,10 +170,10 @@ namespace Referee
 
                 if (isSecondHalf)
                 {
-                    SecondHalfTransform(ref simulationReply);
+                    SecondHalfTransform(ref environment);
                 }
 
-                SimEnvironment2MatchInfo(simulationReply, ref matchInfo);
+                SimEnvironment2MatchInfo(environment, ref matchInfo);
                 matchInfo.TickMatch++;
                 matchInfo.TickPhase++;
             }
