@@ -1,11 +1,9 @@
 ﻿using System;
 
-/// <summary>
-/// 裁判根据比赛规则对场地信息进行判断。
-/// 有两个主要的对外接口：Judge和JudgeAutoPlacement
-/// Judge接口根据传入的MatchInfo，做出对下一拍动作的指示；
-/// JudgeAutoPlacement接口用于更正摆位的位置，将不合法的位置合法化。
-/// </summary>
+// 裁判根据比赛规则对场地信息进行判断。
+// 有两个主要的对外接口：Judge和JudgeAutoPlacement
+// Judge接口根据传入的MatchInfo，做出对下一拍动作的指示；
+// JudgeAutoPlacement接口用于更正摆位的位置，将不合法的位置合法化。
 namespace Referee.Simuro5v5
 {
     public class Referee : ICloneable

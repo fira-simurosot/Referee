@@ -71,6 +71,7 @@ namespace Referee
                     }
                     case ResultType.NextPhase:
                     {
+                        // This Phase is over, start next phase
                         switch (matchInfo.MatchPhase)
                         {
                             case MatchPhase.FirstHalf:
@@ -82,7 +83,6 @@ namespace Referee
                                 isSecondHalf = false;
                                 break;
                             case MatchPhase.OverTime:
-                            case MatchPhase.Penalty:
                                 matchInfo.MatchPhase = MatchPhase.Penalty;
                                 break;
                             default:
@@ -104,56 +104,51 @@ namespace Referee
                     case ResultType.FreeKickLeftTop:
                     case ResultType.FreeKickLeftBot:
                     {
-                        var sendClient = EnvironmentSimToCli(environment, info);
-                        FiraMessage.Ball replyClientBall;
-                        Robots replyBlueClientRobots;
-                        Robots replyYellowClientRobots;
-                        switch (judgeResult.WhosBall)
+                        // A foul happened
+                        
+                        // Get ball position
+                        var cliEnvironment = EnvironmentSimToCli(environment, info);
+                        var ballPosition = judgeResult.WhosBall switch
                         {
-                            case Simuro5v5.Side.Nobody:
-                                replyClientBall = FoulBallPosition(info, judgeResult);
-                                break;
-                            case Simuro5v5.Side.Blue:
-                                replyClientBall = blueClient.SetBall(sendClient);
-                                break;
-                            case Simuro5v5.Side.Yellow:
-                                replyClientBall = yellowClient.SetBall(ConvertToRight(sendClient));
-                                ConvertFromRight(ref replyClientBall);
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException();
-                        }
+                            Simuro5v5.Side.Nobody => FoulBallPosition(info, judgeResult),
+                            Simuro5v5.Side.Blue => blueClient.SetBall(cliEnvironment),
+                            Simuro5v5.Side.Yellow => ConvertFromRight(
+                                yellowClient.SetBall(ConvertToRight(cliEnvironment))),
+                            _ => throw new ArgumentOutOfRangeException()
+                        };
+                        Robots blueClientRobotsReply;
+                        Robots yellowClientRobotsReply;
 
-                        UpdateCliEnvironment(ref sendClient, replyClientBall);
+                        cliEnvironment.Frame.Ball = ballPosition;
                         switch (judgeResult.WhoisFirst)
                         {
                             case Simuro5v5.Side.Blue:
-                                replyBlueClientRobots = blueClient.SetFormerRobots(sendClient);
-                                sendClient.FoulInfo.Actor = Side.Opponent;
-                                UpdateCliEnvironment(ref sendClient, replyBlueClientRobots, false);
-                                CliEnvironment2MatchInfo(sendClient, ref matchInfo);
+                                blueClientRobotsReply = blueClient.SetFormerRobots(cliEnvironment);
+                                cliEnvironment.FoulInfo.Actor = Side.Opponent;
+                                UpdateCliEnvironment(ref cliEnvironment, blueClientRobotsReply, false);
+                                CliEnvironment2MatchInfo(cliEnvironment, ref matchInfo);
                                 matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Blue);
-                                MatchInfo2CliEnvironment(matchInfo, ref sendClient, false);
-                                replyYellowClientRobots = yellowClient.SetLaterRobots(ConvertToRight(sendClient));
-                                ConvertFromRight(ref replyYellowClientRobots);
-                                UpdateCliEnvironment(ref sendClient, replyYellowClientRobots, true);
-                                CliEnvironment2MatchInfo(sendClient, ref matchInfo);
+                                MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, false);
+                                yellowClientRobotsReply = yellowClient.SetLaterRobots(ConvertToRight(cliEnvironment));
+                                ConvertFromRight(ref yellowClientRobotsReply);
+                                UpdateCliEnvironment(ref cliEnvironment, yellowClientRobotsReply, true);
+                                CliEnvironment2MatchInfo(cliEnvironment, ref matchInfo);
                                 matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Yellow);
-                                MatchInfo2CliEnvironment(matchInfo, ref sendClient, true);
+                                MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, true);
                                 break;
                             case Simuro5v5.Side.Yellow:
-                                replyYellowClientRobots = yellowClient.SetFormerRobots(ConvertToRight(sendClient));
-                                ConvertFromRight(ref replyYellowClientRobots);
-                                sendClient.FoulInfo.Actor = Side.Opponent;
-                                UpdateCliEnvironment(ref sendClient, replyYellowClientRobots, true);
-                                CliEnvironment2MatchInfo(sendClient, ref matchInfo);
+                                yellowClientRobotsReply = yellowClient.SetFormerRobots(ConvertToRight(cliEnvironment));
+                                ConvertFromRight(ref yellowClientRobotsReply);
+                                cliEnvironment.FoulInfo.Actor = Side.Opponent;
+                                UpdateCliEnvironment(ref cliEnvironment, yellowClientRobotsReply, true);
+                                CliEnvironment2MatchInfo(cliEnvironment, ref matchInfo);
                                 matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Yellow);
-                                MatchInfo2CliEnvironment(matchInfo, ref sendClient, true);
-                                replyBlueClientRobots = blueClient.SetLaterRobots(sendClient);
-                                UpdateCliEnvironment(ref sendClient, replyBlueClientRobots, false);
-                                CliEnvironment2MatchInfo(sendClient, ref matchInfo);
+                                MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, true);
+                                blueClientRobotsReply = blueClient.SetLaterRobots(cliEnvironment);
+                                UpdateCliEnvironment(ref cliEnvironment, blueClientRobotsReply, false);
+                                CliEnvironment2MatchInfo(cliEnvironment, ref matchInfo);
                                 matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Blue);
-                                MatchInfo2CliEnvironment(matchInfo, ref sendClient, false);
+                                MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, false);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
@@ -412,13 +407,6 @@ namespace Referee
         }
 
         ///Update message after receiving positioning message
-        private static void UpdateCliEnvironment(ref FiraMessage.RefToCli.Environment cliEnvironment,
-            FiraMessage.Ball ball)
-        {
-            cliEnvironment.Frame.Ball = ball;
-        }
-
-        ///Update message after receiving positioning message
         private static void UpdateCliEnvironment(ref FiraMessage.RefToCli.Environment cliEnvironment, Robots robots,
             bool isYellow)
         {
@@ -647,10 +635,9 @@ namespace Referee
 
         /// rotate the coordinates by 180 degrees.
         /// <para>this is done after transmitting information from the yellow client.</para>
-        private static void ConvertFromRight(ref FiraMessage.Ball ball)
+        private static FiraMessage.Ball ConvertFromRight(FiraMessage.Ball ball)
         {
-            ball.X = -ball.X;
-            ball.Y = -ball.Y;
+            return new FiraMessage.Ball { X = -ball.X, Y = -ball.Y, Z = ball.Z };
         }
 
         /// rotate the coordinates by 180 degrees.
