@@ -23,16 +23,46 @@ namespace Referee
             var simulationChannel = new Channel("127.0.0.1:50051", ChannelCredentials.Insecure);
             var blueChannel = new Channel("127.0.0.1:50052", ChannelCredentials.Insecure);
             var yellowChannel = new Channel("127.0.0.1:50053", ChannelCredentials.Insecure);
-            var clientSimulate = new Simulate.SimulateClient(simulationChannel);
+            var simulationClient = new Simulate.SimulateClient(simulationChannel);
             var blueClient = new FiraMessage.RefToCli.Referee.RefereeClient(blueChannel);
             var yellowClient = new FiraMessage.RefToCli.Referee.RefereeClient(yellowChannel);
 
-            // Register strategy
-            var blueTeamInfo = new FiraMessage.RefToCli.TeamInfo {Color = Color.B};
-            var blueName = blueClient.Register(blueTeamInfo);
-            var yellowTeamInfo = new FiraMessage.RefToCli.TeamInfo {Color = Color.Y};
-            var yellowName = yellowClient.Register(yellowTeamInfo);
+            try
+            {
+                // Register strategy
+                var blueTeamInfo = new FiraMessage.RefToCli.TeamInfo {Color = Color.B};
+                var blueName = blueClient.Register(blueTeamInfo);
+                var yellowTeamInfo = new FiraMessage.RefToCli.TeamInfo {Color = Color.Y};
+                var yellowName = yellowClient.Register(yellowTeamInfo);
 
+                var matchInfo = MainLoop(blueClient, yellowClient, simulationClient);
+
+                if (matchInfo.Score.BlueScore > matchInfo.Score.YellowScore)
+                {
+                    blueName.Name += " Win";
+                    Console.WriteLine(blueName.Name);
+                }
+                else if (matchInfo.Score.BlueScore < matchInfo.Score.YellowScore)
+                {
+                    yellowName.Name += " Win";
+                    Console.WriteLine(yellowName.Name);
+                }
+                else
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
+            }
+            finally
+            {
+                blueChannel.ShutdownAsync().Wait();
+                yellowChannel.ShutdownAsync().Wait();
+                simulationChannel.ShutdownAsync().Wait();
+            }
+        }
+
+        private static MatchInfo MainLoop(FiraMessage.RefToCli.Referee.RefereeClient blueClient,
+            FiraMessage.RefToCli.Referee.RefereeClient yellowClient, Simulate.SimulateClient simulationClient)
+        {
             var matchInfo = new MatchInfo();
             var environment = InitSimEnvironment();
             bool isSecondHalf = false;
@@ -58,10 +88,10 @@ namespace Referee
                         // The game continues, move to next frame
                         var blueCliEnvironment = EnvironmentSimToCli(environment, info);
                         var blueClientCommandReply = blueClient.RunStrategy(blueCliEnvironment);
-                        
+
                         var yellowCliEnvironment = ConvertToRight(EnvironmentSimToCli(environment, info));
                         var yellowClientCommandReply = yellowClient.RunStrategy(yellowCliEnvironment);
-                        
+
                         environment =
                             Test(CommandCliToSim(blueClientCommandReply, yellowClientCommandReply, isSecondHalf),
                                 environment);
@@ -94,7 +124,7 @@ namespace Referee
                     }
                     case ResultType.GameOver:
                     {
-                        goto GAME_EXIT;
+                        return matchInfo;
                     }
                     case ResultType.PlaceKick:
                     case ResultType.GoalKick:
@@ -105,7 +135,7 @@ namespace Referee
                     case ResultType.FreeKickLeftBot:
                     {
                         // A foul happened
-                        
+
                         // Get ball position
                         var cliEnvironment = EnvironmentSimToCli(environment, info);
                         var ballPosition = judgeResult.WhosBall switch
@@ -172,26 +202,6 @@ namespace Referee
                 matchInfo.TickMatch++;
                 matchInfo.TickPhase++;
             }
-
-            GAME_EXIT:
-            if (matchInfo.Score.BlueScore > matchInfo.Score.YellowScore)
-            {
-                blueName.Name += " Win";
-                Console.WriteLine(blueName.Name);
-            }
-            else if (matchInfo.Score.BlueScore < matchInfo.Score.YellowScore)
-            {
-                yellowName.Name += " Win";
-                Console.WriteLine(yellowName.Name);
-            }
-            else
-            {
-                throw new ArgumentOutOfRangeException();
-            }
-
-            blueChannel.ShutdownAsync().Wait();
-            yellowChannel.ShutdownAsync().Wait();
-            simulationChannel.ShutdownAsync().Wait();
         }
 
         /// Get Initialization of FiraMessage.SimToRef.Environment
