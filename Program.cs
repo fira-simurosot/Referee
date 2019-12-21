@@ -3,6 +3,7 @@ using System.Linq;
 using FiraMessage;
 using FiraMessage.SimToRef;
 using FiraMessage.RefToCli;
+using Google.Protobuf.Collections;
 using Grpc.Core;
 using Referee.Simuro5v5;
 using Ball = Referee.Simuro5v5.Ball;
@@ -155,14 +156,15 @@ namespace Referee
                             case Simuro5v5.Side.Blue:
                                 blueClientRobotsReply = blueClient.SetFormerRobots(cliEnvironment);
                                 cliEnvironment.FoulInfo.Actor = Side.Opponent;
-                                UpdateCliEnvironment(ref cliEnvironment, blueClientRobotsReply, false);
-                                CliEnvironment2MatchInfo(cliEnvironment, ref matchInfo);
+                                cliEnvironment.Frame.RobotsBlue.SetRobots(blueClientRobotsReply);
+                                matchInfo.UpdateByCliEnvironment(cliEnvironment);
+                                
                                 matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Blue);
                                 MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, false);
                                 yellowClientRobotsReply = yellowClient.SetLaterRobots(ConvertToRight(cliEnvironment));
                                 ConvertFromRight(ref yellowClientRobotsReply);
-                                UpdateCliEnvironment(ref cliEnvironment, yellowClientRobotsReply, true);
-                                CliEnvironment2MatchInfo(cliEnvironment, ref matchInfo);
+                                cliEnvironment.Frame.RobotsYellow.SetRobots(yellowClientRobotsReply);
+                                matchInfo.UpdateByCliEnvironment(cliEnvironment);
                                 matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Yellow);
                                 MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, true);
                                 break;
@@ -170,13 +172,13 @@ namespace Referee
                                 yellowClientRobotsReply = yellowClient.SetFormerRobots(ConvertToRight(cliEnvironment));
                                 ConvertFromRight(ref yellowClientRobotsReply);
                                 cliEnvironment.FoulInfo.Actor = Side.Opponent;
-                                UpdateCliEnvironment(ref cliEnvironment, yellowClientRobotsReply, true);
-                                CliEnvironment2MatchInfo(cliEnvironment, ref matchInfo);
+                                cliEnvironment.Frame.RobotsYellow.SetRobots(yellowClientRobotsReply);
+                                matchInfo.UpdateByCliEnvironment(cliEnvironment);
                                 matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Yellow);
                                 MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, true);
                                 blueClientRobotsReply = blueClient.SetLaterRobots(cliEnvironment);
-                                UpdateCliEnvironment(ref cliEnvironment, blueClientRobotsReply, false);
-                                CliEnvironment2MatchInfo(cliEnvironment, ref matchInfo);
+                                cliEnvironment.Frame.RobotsBlue.SetRobots(blueClientRobotsReply);
+                                matchInfo.UpdateByCliEnvironment(cliEnvironment);
                                 matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Blue);
                                 MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, false);
                                 break;
@@ -417,28 +419,15 @@ namespace Referee
         }
 
         ///Update message after receiving positioning message
-        private static void UpdateCliEnvironment(ref FiraMessage.RefToCli.Environment cliEnvironment, Robots robots,
-            bool isYellow)
+        private static void SetRobots(this RepeatedField<FiraMessage.Robot> frameRobotsField, Robots robots)
         {
-            if (!isYellow)
-            {
-                for (int i = 0; i < 5; i++)
-                {
-                    cliEnvironment.Frame.RobotsBlue[(int) robots.Robots_[i].RobotId] = robots.Robots_[i];
-                }
-            }
-            else
-            {
-                for (int i = 0; i < 5; i++)
-                {
-                    cliEnvironment.Frame.RobotsYellow[(int) robots.Robots_[i].RobotId] = robots.Robots_[i];
-                }
-            }
+            frameRobotsField.Clear();
+            frameRobotsField.AddRange(robots.Robots_);
         }
 
         ///Message type conversion
-        private static void CliEnvironment2MatchInfo(FiraMessage.RefToCli.Environment cliEnvironment,
-            ref MatchInfo matchInfo)
+        private static void UpdateByCliEnvironment(this MatchInfo matchInfo,
+            FiraMessage.RefToCli.Environment cliEnvironment)
         {
             var robotBlue = new Robot[5];
             var robotYellow = new Robot[5];
