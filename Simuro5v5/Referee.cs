@@ -175,14 +175,14 @@ namespace Referee.Simuro5v5
         /// <returns>下一拍应有的动作信息</returns>
         public JudgeResult Judge(MatchInfo matchInfo)
         {
-            this.blueScore = matchInfo.Score.BlueScore;
-            this.yellowScore = matchInfo.Score.YellowScore;
+            blueScore = matchInfo.Score.BlueScore;
+            yellowScore = matchInfo.Score.YellowScore;
             this.matchInfo = matchInfo;
-            this.blueRobots = matchInfo.BlueRobots;
-            this.yellowRobots = matchInfo.YellowRobots;
-            this.goalieBlueId = FindGoalie(Side.Blue);
-            this.goalieYellowId = FindGoalie(Side.Yellow);
-            this.BallPos = matchInfo.Ball.pos;
+            blueRobots = matchInfo.BlueRobots;
+            yellowRobots = matchInfo.YellowRobots;
+            goalieBlueId = FindGoalie(Side.Blue);
+            goalieYellowId = FindGoalie(Side.Yellow);
+            BallPos = matchInfo.Ball.pos;
             for (int i = 0; i < Const.RobotsPerTeam; i++)
             {
                 BlueRobotSquare[i] = new Square(BlueRobotsPos[i], matchInfo.BlueRobots[i].rotation);
@@ -194,7 +194,7 @@ namespace Referee.Simuro5v5
             // 判罚之后应该清零计时
             if (result.ResultType != ResultType.NormalMatch)
             {
-                this.standoffTime = 0;
+                standoffTime = 0;
             }
 
             return result;
@@ -208,19 +208,19 @@ namespace Referee.Simuro5v5
         public void JudgeAutoPlacement(MatchInfo matchInfo, JudgeResult judgeResult, Side target)
         {
             this.matchInfo = matchInfo;
-            this.blueRobots = matchInfo.BlueRobots;
-            this.yellowRobots = matchInfo.YellowRobots;
+            blueRobots = matchInfo.BlueRobots;
+            yellowRobots = matchInfo.YellowRobots;
 
             for (int i = 0; i < Const.RobotsPerTeam; i++)
             {
-                this.BlueRobotsPos[i] = matchInfo.BlueRobots[i].pos;
-                this.YellowRobotsPos[i] = matchInfo.YellowRobots[i].pos;
+                BlueRobotsPos[i] = matchInfo.BlueRobots[i].pos;
+                YellowRobotsPos[i] = matchInfo.YellowRobots[i].pos;
                 BlueRobotSquare[i] = new Square(BlueRobotsPos[i], matchInfo.BlueRobots[i].rotation);
                 YellowRobotSquare[i] = new Square(YellowRobotsPos[i], matchInfo.YellowRobots[i].rotation);
             }
 
             //该情况一般只用于门球情况，进攻方自定义球的坐标
-            this.BallPos = matchInfo.Ball.pos;
+            BallPos = matchInfo.Ball.pos;
             switch (judgeResult.ResultType)
             {
                 case ResultType.PenaltyKick:
@@ -605,6 +605,7 @@ namespace Referee.Simuro5v5
             //进球
             if (yellowGoalState.ContainsCircle(matchInfo.Ball.pos, Const.Ball.HBL))
             {
+                matchInfo.Score.BlueScore++;
                 judgeResult = new JudgeResult
                 {
                     Actor = Side.Yellow,
@@ -617,6 +618,7 @@ namespace Referee.Simuro5v5
 
             if (blueGoalState.ContainsCircle(matchInfo.Ball.pos, Const.Ball.HBL))
             {
+                matchInfo.Score.YellowScore++;
                 judgeResult = new JudgeResult
                 {
                     Actor = Side.Blue,
