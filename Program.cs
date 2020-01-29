@@ -21,12 +21,14 @@ namespace Referee
         {
             // Get gRPC client
             Console.WriteLine("This project is still in early stage");
-            var simulationChannel = new Channel("127.0.0.1:50051", ChannelCredentials.Insecure);
             var blueChannel = new Channel("127.0.0.1:50052", ChannelCredentials.Insecure);
             var yellowChannel = new Channel("127.0.0.1:50053", ChannelCredentials.Insecure);
-            var simulationClient = new Simulate.SimulateClient(simulationChannel);
             var blueClient = new FiraMessage.RefToCli.Referee.RefereeClient(blueChannel);
             var yellowClient = new FiraMessage.RefToCli.Referee.RefereeClient(yellowChannel);
+            
+            //var simulationChannel = new Channel("127.0.0.1:50051", ChannelCredentials.Insecure);
+            //var simulationClient = new GrpcSimulateClient(new Simulate.SimulateClient(simulationChannel));
+            using var simulationClient = new SimulateClient("127.0.0.1", 50051, 50054);
 
             try
             {
@@ -57,12 +59,12 @@ namespace Referee
             {
                 blueChannel.ShutdownAsync().Wait();
                 yellowChannel.ShutdownAsync().Wait();
-                simulationChannel.ShutdownAsync().Wait();
+                //simulationChannel.ShutdownAsync().Wait();
             }
         }
 
         private static MatchInfo MainLoop(FiraMessage.RefToCli.Referee.RefereeClient blueClient,
-            FiraMessage.RefToCli.Referee.RefereeClient yellowClient, Simulate.SimulateClient simulationClient)
+            FiraMessage.RefToCli.Referee.RefereeClient yellowClient, ISimulateClient simulationClient)
         {
             var matchInfo = new MatchInfo();
             var environment = InitSimEnvironment();
@@ -96,8 +98,8 @@ namespace Referee
                         environment =
                             Test(CommandCliToSim(blueClientCommandReply, yellowClientCommandReply, isSecondHalf),
                                 environment);
-                        //clientSimulate.Simulate(CommandCliToSim(replyBlueClientCommand,
-                        //    replyYellowClientCommand, isSecondHalf));
+                        simulationClient.Simulate(CommandCliToSim(blueClientCommandReply,
+                            yellowClientCommandReply, isSecondHalf));
                         break;
                     }
                     case ResultType.NextPhase:
