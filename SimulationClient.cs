@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Sockets;
 using FiraMessage.SimToRef;
 using Google.Protobuf;
-using Microsoft.VisualBasic;
 using Environment = FiraMessage.SimToRef.Environment;
 
 namespace Referee
@@ -15,29 +14,30 @@ namespace Referee
     
     public class SimulateClient : ISimulateClient, IDisposable
     {
-        private readonly int listenPort;
-        private readonly UdpClient client;
+        private readonly UdpClient sendClient;
+        private readonly UdpClient receiveClient;
         
-        public SimulateClient(string address, int port, int listenPort)
+        public SimulateClient(string address, int sendPort, int listenPort)
         {
-            this.listenPort = listenPort;
-            client = new UdpClient(0);
-            client.Connect(address, port);
+            sendClient = new UdpClient();
+            sendClient.Connect(address, sendPort);
+            
+            receiveClient = new UdpClient(listenPort);
         }
         
         public Environment Simulate(Packet request)
         {
             var bytes = request.ToByteArray();
-            client.Send(bytes, bytes.Length);
-            var endpoint = new IPEndPoint(IPAddress.Any, listenPort);
-            var receive = client.Receive(ref endpoint);
+            sendClient.Send(bytes, bytes.Length);
+            var endpoint = new IPEndPoint(IPAddress.Any, 0);
+            var receive = receiveClient.Receive(ref endpoint);
             var environment = Environment.Parser.ParseFrom(receive);
             return environment;
         }
 
         public void Dispose()
         {
-            client.Close();
+            sendClient.Close();
         }
     }
 
