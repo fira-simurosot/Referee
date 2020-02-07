@@ -4,7 +4,7 @@
 # Installation
 
 To use the executable, a **.NET Core Runtime** is required.
-Forllowing the [official instructions](https://docs.microsoft.com/dotnet/core/install/runtime) to install it.
+Follow the [official instructions](https://docs.microsoft.com/dotnet/core/install/runtime) to install it.
 
 # Build
 
