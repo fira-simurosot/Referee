@@ -55,6 +55,13 @@ namespace Referee
                     throw new ArgumentOutOfRangeException();
                 }
             }
+            catch (RpcException ex)
+            {
+                if (ex.Status.StatusCode == StatusCode.Unavailable)
+                {
+                    Console.WriteLine("An agent client has closed.");
+                }
+            }
             finally
             {
                 blueChannel.ShutdownAsync().Wait();
