@@ -78,140 +78,151 @@ namespace Referee
             bool isSecondHalf = false;
             while (true)
             {
-                //TODO: just for test
-                Console.Out.WriteLine("MatchPhase = {0}", matchInfo.MatchPhase);
-                Console.Out.WriteLine("matchInfo.TickPhase = {0}", matchInfo.TickPhase);
-                Console.Out.WriteLine("matchInfo.TickMatch = {0}", matchInfo.TickMatch);
-                if (matchInfo.MatchPhase == MatchPhase.Penalty)
+                try
                 {
-                    Console.Out.WriteLine("BlueScore = {0}", matchInfo.Score.BlueScore);
-                    Console.Out.WriteLine("YellowScore = {0}", matchInfo.Score.YellowScore);
-                }
-
-                // Get JudgeResult from the judge
-                var judgeResult = matchInfo.Referee.Judge(matchInfo);
-                FoulInfo info = ExtractFoulInfo(judgeResult, matchInfo);
-                switch (judgeResult.ResultType)
-                {
-                    case ResultType.NormalMatch:
+                    //TODO: just for test
+                    Console.Out.WriteLine("MatchPhase = {0}", matchInfo.MatchPhase);
+                    Console.Out.WriteLine("matchInfo.TickPhase = {0}", matchInfo.TickPhase);
+                    Console.Out.WriteLine("matchInfo.TickMatch = {0}", matchInfo.TickMatch);
+                    if (matchInfo.MatchPhase == MatchPhase.Penalty)
                     {
-                        // The game continues, move to next frame
-                        var blueCliEnvironment = EnvironmentSimToCli(environment, info);
-                        var blueClientCommandReply = blueClient.RunStrategy(blueCliEnvironment);
-
-                        var yellowCliEnvironment = ConvertToRight(EnvironmentSimToCli(environment, info));
-                        var yellowClientCommandReply = yellowClient.RunStrategy(yellowCliEnvironment);
-
-                        environment =
-                            Test(CommandCliToSim(blueClientCommandReply, yellowClientCommandReply, isSecondHalf),
-                                environment);
-                        simulationClient.Simulate(CommandCliToSim(blueClientCommandReply,
-                            yellowClientCommandReply, isSecondHalf));
-                        break;
+                        Console.Out.WriteLine("BlueScore = {0}", matchInfo.Score.BlueScore);
+                        Console.Out.WriteLine("YellowScore = {0}", matchInfo.Score.YellowScore);
                     }
-                    case ResultType.NextPhase:
+
+                    // Get JudgeResult from the judge
+                    var judgeResult = matchInfo.Referee.Judge(matchInfo);
+                    FoulInfo info = ExtractFoulInfo(judgeResult, matchInfo);
+                    switch (judgeResult.ResultType)
                     {
-                        // This Phase is over, start next phase
-                        switch (matchInfo.MatchPhase)
+                        case ResultType.NormalMatch:
                         {
-                            case MatchPhase.FirstHalf:
-                                matchInfo.MatchPhase = MatchPhase.SecondHalf;
-                                isSecondHalf = true;
-                                break;
-                            case MatchPhase.SecondHalf:
-                                matchInfo.MatchPhase = MatchPhase.OverTime;
-                                isSecondHalf = false;
-                                break;
-                            case MatchPhase.OverTime:
-                                matchInfo.MatchPhase = MatchPhase.Penalty;
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException();
+                            // The game continues, move to next frame
+                            var blueCliEnvironment = EnvironmentSimToCli(environment, info);
+                            var blueClientCommandReply = blueClient.RunStrategy(blueCliEnvironment);
+
+                            var yellowCliEnvironment = ConvertToRight(EnvironmentSimToCli(environment, info));
+                            var yellowClientCommandReply = yellowClient.RunStrategy(yellowCliEnvironment);
+
+                            environment =
+                                Test(CommandCliToSim(blueClientCommandReply, yellowClientCommandReply, isSecondHalf),
+                                    environment);
+                            simulationClient.Simulate(CommandCliToSim(blueClientCommandReply,
+                                yellowClientCommandReply, isSecondHalf));
+                            break;
                         }
-
-                        matchInfo.TickPhase = 0;
-                        continue;
-                    }
-                    case ResultType.GameOver:
-                    {
-                        return matchInfo;
-                    }
-                    case ResultType.PlaceKick:
-                    case ResultType.GoalKick:
-                    case ResultType.PenaltyKick:
-                    case ResultType.FreeKickRightTop:
-                    case ResultType.FreeKickRightBot:
-                    case ResultType.FreeKickLeftTop:
-                    case ResultType.FreeKickLeftBot:
-                    {
-                        // A foul happened
-
-                        // Get ball position
-                        var cliEnvironment = EnvironmentSimToCli(environment, info);
-                        var ballPosition = judgeResult.WhosBall switch
+                        case ResultType.NextPhase:
                         {
-                            Simuro5v5.Side.Nobody => FoulBallPosition(info, judgeResult),
-                            Simuro5v5.Side.Blue => blueClient.SetBall(cliEnvironment),
-                            Simuro5v5.Side.Yellow => ConvertFromRight(
-                                yellowClient.SetBall(ConvertToRight(cliEnvironment))),
-                            _ => throw new ArgumentOutOfRangeException()
-                        };
-                        Robots blueClientRobotsReply;
-                        Robots yellowClientRobotsReply;
+                            // This Phase is over, start next phase
+                            switch (matchInfo.MatchPhase)
+                            {
+                                case MatchPhase.FirstHalf:
+                                    matchInfo.MatchPhase = MatchPhase.SecondHalf;
+                                    isSecondHalf = true;
+                                    break;
+                                case MatchPhase.SecondHalf:
+                                    matchInfo.MatchPhase = MatchPhase.OverTime;
+                                    isSecondHalf = false;
+                                    break;
+                                case MatchPhase.OverTime:
+                                    matchInfo.MatchPhase = MatchPhase.Penalty;
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException();
+                            }
 
-                        cliEnvironment.Frame.Ball = ballPosition;
-                        switch (judgeResult.WhoisFirst)
-                        {
-                            case Simuro5v5.Side.Blue:
-                                blueClientRobotsReply = blueClient.SetFormerRobots(cliEnvironment);
-                                cliEnvironment.FoulInfo.Actor = Side.Opponent;
-                                cliEnvironment.Frame.RobotsBlue.SetRobots(blueClientRobotsReply);
-                                matchInfo.UpdateByCliEnvironment(cliEnvironment);
-                                
-                                matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Blue);
-                                MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, false);
-                                yellowClientRobotsReply = yellowClient.SetLaterRobots(ConvertToRight(cliEnvironment));
-                                ConvertFromRight(ref yellowClientRobotsReply);
-                                cliEnvironment.Frame.RobotsYellow.SetRobots(yellowClientRobotsReply);
-                                matchInfo.UpdateByCliEnvironment(cliEnvironment);
-                                matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Yellow);
-                                MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, true);
-                                break;
-                            case Simuro5v5.Side.Yellow:
-                                yellowClientRobotsReply = yellowClient.SetFormerRobots(ConvertToRight(cliEnvironment));
-                                ConvertFromRight(ref yellowClientRobotsReply);
-                                cliEnvironment.FoulInfo.Actor = Side.Opponent;
-                                cliEnvironment.Frame.RobotsYellow.SetRobots(yellowClientRobotsReply);
-                                matchInfo.UpdateByCliEnvironment(cliEnvironment);
-                                matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Yellow);
-                                MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, true);
-                                blueClientRobotsReply = blueClient.SetLaterRobots(cliEnvironment);
-                                cliEnvironment.Frame.RobotsBlue.SetRobots(blueClientRobotsReply);
-                                matchInfo.UpdateByCliEnvironment(cliEnvironment);
-                                matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Blue);
-                                MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, false);
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException();
+                            matchInfo.TickPhase = 0;
+                            continue;
                         }
+                        case ResultType.GameOver:
+                        {
+                            return matchInfo;
+                        }
+                        case ResultType.PlaceKick:
+                        case ResultType.GoalKick:
+                        case ResultType.PenaltyKick:
+                        case ResultType.FreeKickRightTop:
+                        case ResultType.FreeKickRightBot:
+                        case ResultType.FreeKickLeftTop:
+                        case ResultType.FreeKickLeftBot:
+                        {
+                            // A foul happened
 
-                        //TODO: just for test
-                        environment = Test(MatchInfo2Packet(matchInfo, isSecondHalf), environment);
-                        //clientSimulate.Simulate(MatchInfo2Packet(matchInfo, isSecondHalf));
-                        break;
+                            // Get ball position
+                            var cliEnvironment = EnvironmentSimToCli(environment, info);
+                            var ballPosition = judgeResult.WhosBall switch
+                            {
+                                Simuro5v5.Side.Nobody => FoulBallPosition(info, judgeResult),
+                                Simuro5v5.Side.Blue => blueClient.SetBall(cliEnvironment),
+                                Simuro5v5.Side.Yellow => ConvertFromRight(
+                                    yellowClient.SetBall(ConvertToRight(cliEnvironment))),
+                                _ => throw new ArgumentOutOfRangeException()
+                            };
+                            Robots blueClientRobotsReply;
+                            Robots yellowClientRobotsReply;
+
+                            cliEnvironment.Frame.Ball = ballPosition;
+                            switch (judgeResult.WhoisFirst)
+                            {
+                                case Simuro5v5.Side.Blue:
+                                    blueClientRobotsReply = blueClient.SetFormerRobots(cliEnvironment);
+                                    cliEnvironment.FoulInfo.Actor = Side.Opponent;
+                                    cliEnvironment.Frame.RobotsBlue.SetRobots(blueClientRobotsReply);
+                                    matchInfo.UpdateByCliEnvironment(cliEnvironment);
+
+                                    matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Blue);
+                                    MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, false);
+                                    yellowClientRobotsReply =
+                                        yellowClient.SetLaterRobots(ConvertToRight(cliEnvironment));
+                                    ConvertFromRight(ref yellowClientRobotsReply);
+                                    cliEnvironment.Frame.RobotsYellow.SetRobots(yellowClientRobotsReply);
+                                    matchInfo.UpdateByCliEnvironment(cliEnvironment);
+                                    matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Yellow);
+                                    MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, true);
+                                    break;
+                                case Simuro5v5.Side.Yellow:
+                                    yellowClientRobotsReply =
+                                        yellowClient.SetFormerRobots(ConvertToRight(cliEnvironment));
+                                    ConvertFromRight(ref yellowClientRobotsReply);
+                                    cliEnvironment.FoulInfo.Actor = Side.Opponent;
+                                    cliEnvironment.Frame.RobotsYellow.SetRobots(yellowClientRobotsReply);
+                                    matchInfo.UpdateByCliEnvironment(cliEnvironment);
+                                    matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Yellow);
+                                    MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, true);
+                                    blueClientRobotsReply = blueClient.SetLaterRobots(cliEnvironment);
+                                    cliEnvironment.Frame.RobotsBlue.SetRobots(blueClientRobotsReply);
+                                    matchInfo.UpdateByCliEnvironment(cliEnvironment);
+                                    matchInfo.Referee.JudgeAutoPlacement(matchInfo, judgeResult, Simuro5v5.Side.Blue);
+                                    MatchInfo2CliEnvironment(matchInfo, ref cliEnvironment, false);
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException();
+                            }
+
+                            //TODO: just for test
+                            environment = Test(MatchInfo2Packet(matchInfo, isSecondHalf), environment);
+                            //clientSimulate.Simulate(MatchInfo2Packet(matchInfo, isSecondHalf));
+                            break;
+                        }
+                        default:
+                            throw new ArgumentOutOfRangeException();
                     }
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
 
-                if (isSecondHalf)
+                    if (isSecondHalf)
+                    {
+                        SecondHalfTransform(ref environment);
+                    }
+
+                    SimEnvironment2MatchInfo(environment, ref matchInfo);
+                    matchInfo.TickMatch++;
+                    matchInfo.TickPhase++;
+                }
+                catch (RpcException ex)
                 {
-                    SecondHalfTransform(ref environment);
+                    Console.WriteLine($"RPC exception occured: {ex.Message}");
+                    Console.WriteLine("Press ENTER to retry...");
+                    Console.ReadLine();
                 }
-
-                SimEnvironment2MatchInfo(environment, ref matchInfo);
-                matchInfo.TickMatch++;
-                matchInfo.TickPhase++;
             }
         }
 
