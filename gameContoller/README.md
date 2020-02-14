@@ -1,7 +1,7 @@
 # Game Controller
 
 <p align="center">
-<img src="https://github.com/fira-simurosot/Referee/raw/master/gameContoller/resources/screenshot.png" alt="GameController"
+<img src="resources/screenshot.png" alt="GameController"
 title="GameController" width="200" align="middle" />
 </p>
 
