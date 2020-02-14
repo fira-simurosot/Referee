@@ -353,4 +353,4 @@ MigrationBackup/
 .ionide/
 
 gameContoller/env
-gameContoller/message
+gameContoller/messages

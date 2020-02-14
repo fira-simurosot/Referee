@@ -52,7 +52,7 @@ def virtualGameControllerServicer():
     step += 1
     request = messages_pb2.Environment()
     # print(request.statistics.scoreYellow)
-    myWidget.labelsteper.setText(str(step) + ' / 18000')
+    myWidget.labelsteper.setText('step ' + str(step) + ' / 18000')
 
 steper = QTimer()
 steper.timeout.connect(virtualGameControllerServicer)
