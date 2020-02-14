@@ -23,7 +23,12 @@ class GameControllerServicer(service_pb2_grpc.GameControllerServicer):
 
     def handyReferee(self, request, context):
         print("handyReferee")
-        response = messages_pb2.HandyRef()
+        if myWidget.step == 0:
+            myWidget.startTimer()
+
+        response = myWidget.updateStats(request.statistics.scoreBlue, request.statistics.scoreYellow)
+        if response.ByteSize() != 0:
+            print(response)
         return response
 
 server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
@@ -33,13 +38,16 @@ server.start()
 
 
 
-
+##testing the app without referee server
 def virtualGameControllerServicer():
     if myWidget.step == 0:
         myWidget.startTimer()
-    myWidget.updateStats()
+
     request = messages_pb2.Environment()
-    # print(request.statistics.scoreYellow)
+    response = myWidget.updateStats(request.statistics.scoreBlue, request.statistics.scoreYellow)
+    if response.ByteSize() != 0:
+        print(response)
+    return response
 
 steper = QTimer()
 steper.timeout.connect(virtualGameControllerServicer)
