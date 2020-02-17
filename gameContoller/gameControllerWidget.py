@@ -58,79 +58,60 @@ class GameControllerWidget(QWidget):
         if buttonName == 'pbPlaceKickBlue':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.PlaceKick
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.B
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbPnaltyKickBlue':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.PenaltyKick
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.B
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbFreeKickBlue':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.FreeKick
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.B
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbGoalKickBlue':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.GoalKick
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.B
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbFreeBallLeftTopBlue':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.FreeBallLeftTop
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.B
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbFreeBallRightTopBlue':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.FreeBallRightTop
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.B
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbFreeBallLeftBotBlue':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.FreeBallLeftBot
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.B
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbFreeBallRightBotBlue':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.FreeBallRightBot
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.B
-            self.responseHandyRef.isOwerWriting = True
 
         elif buttonName == 'pbPlaceKickYellow':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.PlaceKick
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.Y
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbPnaltyKickYellow':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.PenaltyKick
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.Y
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbFreeKickYellow':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.FreeKick
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.Y
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbGoalKickYellow':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.GoalKick
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.Y
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbFreeBallLeftTopYellow':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.FreeBallLeftTop
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.Y
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbFreeBallRightTopYellow':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.FreeBallRightTop
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.Y
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbFreeBallLeftBotYellow':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.FreeBallLeftBot
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.Y
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbFreeBallRightBotYellow':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.FreeBallRightBot
             self.responseHandyRef.foulInfo.actorColor = messages_pb2.Color.Y
-            self.responseHandyRef.isOwerWriting = True
 
         elif buttonName == 'pbPlayOn':
             self.responseHandyRef.foulInfo.type = messages_pb2.FoulInfo.FoulType.PlayOn
-            self.responseHandyRef.isOwerWriting = True
         elif buttonName == 'pbStop':
             self.responseHandyRef.foulInfo.phase = messages_pb2.FoulInfo.PhaseType.Stopped
-            self.responseHandyRef.isOwerWriting = True
         #TODO referee dowsnt provide halt we act like stop for now
         elif buttonName == 'pbHalt':
             self.responseHandyRef.foulInfo.phase = messages_pb2.FoulInfo.PhaseType.Stopped
-            self.responseHandyRef.isOwerWriting = True
 
 
 
@@ -154,6 +135,8 @@ class GameControllerWidget(QWidget):
         #create response
         tmp = messages_pb2.HandyRef()
         tmp.CopyFrom(self.responseHandyRef)
+        if self.checkIgnore.isChecked():
+            tmp.isOwerWriting = True
         self.responseHandyRef.Clear()
         return tmp
 
