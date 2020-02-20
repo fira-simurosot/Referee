@@ -104,9 +104,6 @@ namespace Referee
                             var yellowCliEnvironment = ConvertToRight(EnvironmentSimToCli(environment, info));
                             var yellowClientCommandReply = yellowClient.RunStrategy(yellowCliEnvironment);
 
-                            environment =
-                                Test(CommandCliToSim(blueClientCommandReply, yellowClientCommandReply, isSecondHalf),
-                                    environment);
                             simulationClient.Simulate(CommandCliToSim(blueClientCommandReply,
                                 yellowClientCommandReply, isSecondHalf));
                             break;
@@ -199,9 +196,7 @@ namespace Referee
                                     throw new ArgumentOutOfRangeException();
                             }
 
-                            //TODO: just for test
-                            environment = Test(MatchInfo2Packet(matchInfo, isSecondHalf), environment);
-                            //clientSimulate.Simulate(MatchInfo2Packet(matchInfo, isSecondHalf));
+                            simulationClient.Simulate(MatchInfo2Packet(matchInfo, isSecondHalf));
                             break;
                         }
                         default:
@@ -676,121 +671,6 @@ namespace Referee
                     })
                 }
             };
-        }
-
-        //TODO: just for test
-        private static double Test(double x, double min, double max, bool flag = false)
-        {
-            if (flag)
-            {
-                if (x < -180.0)
-                {
-                    return x + 360.0;
-                }
-
-                if (x > 180.0)
-                {
-                    return x - 360.0;
-                }
-
-                return x;
-            }
-
-            if (x < min)
-            {
-                return min;
-            }
-
-            if (x > max)
-            {
-                return max;
-            }
-
-            return x;
-        }
-
-        private static Environment Test(Packet packet,
-            Environment simEnvironment = null)
-        {
-            Random random = new Random();
-            if (packet.Replace != null)
-            {
-                FiraMessage.Robot[] robotBlue = new FiraMessage.Robot[5];
-                FiraMessage.Robot[] robotYellow = new FiraMessage.Robot[5];
-                for (int i = 0, j = 0, k = 0; i < 10; i++)
-                {
-                    if (!packet.Replace.Robots[i].Yellowteam)
-                    {
-                        robotBlue[j] = new FiraMessage.Robot();
-                        robotBlue[j].RobotId = packet.Replace.Robots[i].Position.RobotId;
-                        robotBlue[j].X = packet.Replace.Robots[i].Position.X;
-                        robotBlue[j].Y = packet.Replace.Robots[i].Position.Y;
-                        robotBlue[j++].Orientation = packet.Replace.Robots[i].Position.Orientation;
-                    }
-                    else
-                    {
-                        robotYellow[k] = new FiraMessage.Robot();
-                        robotYellow[k].RobotId = packet.Replace.Robots[i].Position.RobotId;
-                        robotYellow[k].X = packet.Replace.Robots[i].Position.X;
-                        robotYellow[k].Y = packet.Replace.Robots[i].Position.Y;
-                        robotYellow[k++].Orientation = packet.Replace.Robots[i].Position.Orientation;
-                    }
-                }
-
-                return new Environment
-                {
-                    Step = (uint) random.Next(66 * 5 * 60),
-                    Field = new Field(),
-                    Frame = new Frame
-                    {
-                        Ball = new FiraMessage.Ball
-                        {
-                            X = packet.Replace.Ball.X,
-                            Y = packet.Replace.Ball.Y,
-                            Z = 0.0
-                        },
-                        RobotsBlue = {robotBlue},
-                        RobotsYellow = {robotYellow}
-                    }
-                };
-            }
-
-            return simEnvironment;
-
-            if (packet.Cmd != null)
-            {
-                simEnvironment.Step++;
-                simEnvironment.Frame.Ball.X += 10.0 * random.NextDouble();
-                simEnvironment.Frame.Ball.Y += 10.0 * random.NextDouble();
-                for (int i = 0; i < 5; i++)
-                {
-                    simEnvironment.Frame.RobotsBlue[i].X += 10.0 * random.NextDouble();
-                    simEnvironment.Frame.RobotsBlue[i].Y += 10.0 * random.NextDouble();
-                    simEnvironment.Frame.RobotsBlue[i].Orientation += 30.0 * random.NextDouble();
-                    simEnvironment.Frame.RobotsYellow[i].X += 10.0 * random.NextDouble();
-                    simEnvironment.Frame.RobotsYellow[i].Y += 10.0 * random.NextDouble();
-                    simEnvironment.Frame.RobotsYellow[i].Orientation += 30.0 * random.NextDouble();
-                }
-
-                for (int i = 0; i < 5; i++)
-                {
-                    simEnvironment.Frame.RobotsBlue[i].X = Test(simEnvironment.Frame.RobotsBlue[i].X, -110.0, 110.0);
-                    simEnvironment.Frame.RobotsBlue[i].Y = Test(simEnvironment.Frame.RobotsBlue[i].Y, -90.0, 90.0);
-                    simEnvironment.Frame.RobotsBlue[i].Orientation = Test(
-                        simEnvironment.Frame.RobotsBlue[i].Orientation,
-                        -180.0, 180.0, true);
-                    simEnvironment.Frame.RobotsYellow[i].X =
-                        Test(simEnvironment.Frame.RobotsYellow[i].X, -110.0, 110.0);
-                    simEnvironment.Frame.RobotsYellow[i].Y = Test(simEnvironment.Frame.RobotsYellow[i].Y, -90.0, 90.0);
-                    simEnvironment.Frame.RobotsYellow[i].Orientation = Test(
-                        simEnvironment.Frame.RobotsYellow[i].Orientation,
-                        -180.0, 180.0, true);
-                }
-
-                return simEnvironment;
-            }
-
-            throw new ArgumentException();
         }
     }
 }
