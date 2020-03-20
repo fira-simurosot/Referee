@@ -367,12 +367,18 @@ namespace Referee
                 }
                 else if (i >= 5)
                 {
-                    robot[5 + environment.Frame.RobotsYellow[i - 5].RobotId].pos.x =
+                    //*
+                    // Determine if the RobotId needs to br increased by 5
+                    var offset = 0;
+                    var curRobotId = environment.Frame.RobotsYellow[i - 5].RobotId;
+                    if (curRobotId < 5) offset = 5;
+                    robot[offset + environment.Frame.RobotsYellow[i - 5].RobotId].pos.x =
                         environment.Frame.RobotsYellow[i - 5].X;
-                    robot[5 + environment.Frame.RobotsYellow[i - 5].RobotId].pos.y =
+                    robot[offset + environment.Frame.RobotsYellow[i - 5].RobotId].pos.y =
                         environment.Frame.RobotsYellow[i - 5].Y;
-                    robot[5 + environment.Frame.RobotsYellow[i - 5].RobotId].rotation =
+                    robot[offset + environment.Frame.RobotsYellow[i - 5].RobotId].rotation =
                         environment.Frame.RobotsYellow[i - 5].Orientation;
+                    //*/
                 }
             }
 
