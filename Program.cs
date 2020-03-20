@@ -224,10 +224,10 @@ namespace Referee
         /// Get Initialization of FiraMessage.SimToRef.Environment
         private static Environment InitSimEnvironment()
         {
-            double[] blueX = {30, 80, 95, 80, 30};
-            double[] blueY = {60, 60, 0, -60, -60};
-            double[] yellowX = {-30, -80, -95, -80, -30};
-            double[] yellowY = {60, 60, 0, -60, -60};
+            double[] blueX = {0.30, 0.80, 0.95, 0.80, 0.30};
+            double[] blueY = {0.60, 0.60, 0.0, -0.60, -0.60};
+            double[] yellowX = {-0.30, -0.80, -0.95, -0.80, -0.30};
+            double[] yellowY = {0.60, 0.60, 0.0, -0.60, -0.60};
 
             var simEnvironment = new Environment
             {
@@ -355,17 +355,17 @@ namespace Referee
             {
                 if (i < 5)
                 {
-                    robot[environment.Frame.RobotsBlue[i].RobotId].pos.x = environment.Frame.RobotsBlue[i].X;
-                    robot[environment.Frame.RobotsBlue[i].RobotId].pos.y = environment.Frame.RobotsBlue[i].Y;
+                    robot[environment.Frame.RobotsBlue[i].RobotId].pos.x = environment.Frame.RobotsBlue[i].X * 100;
+                    robot[environment.Frame.RobotsBlue[i].RobotId].pos.y = environment.Frame.RobotsBlue[i].Y * 100;
                     robot[environment.Frame.RobotsBlue[i].RobotId].rotation =
                         environment.Frame.RobotsBlue[i].Orientation;
                 }
                 else if (i >= 5)
                 {
                     robot[5 + environment.Frame.RobotsYellow[i - 5].RobotId].pos.x =
-                        environment.Frame.RobotsYellow[i - 5].X;
+                        environment.Frame.RobotsYellow[i - 5].X * 100;
                     robot[5 + environment.Frame.RobotsYellow[i - 5].RobotId].pos.y =
-                        environment.Frame.RobotsYellow[i - 5].Y;
+                        environment.Frame.RobotsYellow[i - 5].Y * 100;
                     robot[5 + environment.Frame.RobotsYellow[i - 5].RobotId].rotation =
                         environment.Frame.RobotsYellow[i - 5].Orientation;
                 }
@@ -379,8 +379,8 @@ namespace Referee
             {
                 pos = new Vector2D
                 {
-                    x = environment.Frame.Ball.X,
-                    y = environment.Frame.Ball.Y
+                    x = environment.Frame.Ball.X * 100,
+                    y = environment.Frame.Ball.Y * 100
                 }
             };
             matchInfo.BlueRobots = robot.Take(5).ToArray();
@@ -532,8 +532,8 @@ namespace Referee
                 {
                     Ball = new BallReplacement
                     {
-                        X = matchInfo.Ball.pos.x,
-                        Y = matchInfo.Ball.pos.y,
+                        X = matchInfo.Ball.pos.x / 100,
+                        Y = matchInfo.Ball.pos.y / 100,
                         Vx = matchInfo.Ball.linearVelocity.x,
                         Vy = matchInfo.Ball.linearVelocity.y
                     },
@@ -547,8 +547,8 @@ namespace Referee
                             Position = new FiraMessage.Robot
                             {
                                 RobotId = (uint) i,
-                                X = flag * robot.pos.x,
-                                Y = flag * robot.pos.y,
+                                X = flag * robot.pos.x / 100,
+                                Y = flag * robot.pos.y / 100,
                                 Orientation = isSecondHalf
                                     ? (robot.rotation > 0 ? robot.rotation - 180 : robot.rotation + 180)
                                     : robot.rotation
@@ -561,8 +561,8 @@ namespace Referee
                             Position = new FiraMessage.Robot
                             {
                                 RobotId = (uint) i,
-                                X = flag * robot.pos.x,
-                                Y = flag * robot.pos.y,
+                                X = flag * robot.pos.x / 100,
+                                Y = flag * robot.pos.y / 100,
                                 Orientation = isSecondHalf
                                     ? (robot.rotation > 0 ? robot.rotation - 180 : robot.rotation + 180)
                                     : robot.rotation
