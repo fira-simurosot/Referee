@@ -550,7 +550,7 @@ namespace Referee
                                 X = flag * robot.pos.x / 100,
                                 Y = flag * robot.pos.y / 100,
                                 Orientation = isSecondHalf
-                                    ? (robot.rotation > 0 ? robot.rotation - 180 : robot.rotation + 180)
+                                    ? (robot.rotation > 0 ? robot.rotation - Math.PI : robot.rotation + Math.PI)
                                     : robot.rotation
                             },
                             Yellowteam = isSecondHalf,
@@ -564,7 +564,7 @@ namespace Referee
                                 X = flag * robot.pos.x / 100,
                                 Y = flag * robot.pos.y / 100,
                                 Orientation = isSecondHalf
-                                    ? (robot.rotation > 0 ? robot.rotation - 180 : robot.rotation + 180)
+                                    ? (robot.rotation > 0 ? robot.rotation - Math.PI : robot.rotation + Math.PI)
                                     : robot.rotation
                             },
                             Yellowteam = !isSecondHalf,
@@ -593,7 +593,7 @@ namespace Referee
                         RobotId = robot.RobotId,
                         X = -robot.X,
                         Y = -robot.Y,
-                        Orientation = robot.Orientation > 0 ? robot.Orientation - 180 : robot.Orientation + 180
+                        Orientation = robot.Orientation > 0 ? robot.Orientation - Math.PI : robot.Orientation + Math.PI
                     })
                 },
                 RobotsYellow =
@@ -603,7 +603,7 @@ namespace Referee
                         RobotId = robot.RobotId,
                         X = -robot.X,
                         Y = -robot.Y,
-                        Orientation = robot.Orientation > 0 ? robot.Orientation - 180 : robot.Orientation + 180
+                        Orientation = robot.Orientation > 0 ? robot.Orientation - Math.PI : robot.Orientation + Math.PI
                     })
                 }
             };
@@ -630,7 +630,7 @@ namespace Referee
                             RobotId = robot.RobotId,
                             X = -robot.X,
                             Y = -robot.Y,
-                            Orientation = robot.Orientation > 0 ? robot.Orientation - 180 : robot.Orientation + 180
+                            Orientation = robot.Orientation > 0 ? robot.Orientation - Math.PI : robot.Orientation + Math.PI
                         })
                     },
                     RobotsYellow =
@@ -640,7 +640,7 @@ namespace Referee
                             RobotId = robot.RobotId,
                             X = -robot.X,
                             Y = -robot.Y,
-                            Orientation = robot.Orientation > 0 ? robot.Orientation - 180 : robot.Orientation + 180
+                            Orientation = robot.Orientation > 0 ? robot.Orientation - Math.PI : robot.Orientation + Math.PI
                         })
                     }
                 }
@@ -667,7 +667,7 @@ namespace Referee
                         RobotId = robot.RobotId,
                         X = -robot.X,
                         Y = -robot.Y,
-                        Orientation = robot.Orientation > 0 ? robot.Orientation - 180 : robot.Orientation + 180
+                        Orientation = robot.Orientation > 0 ? robot.Orientation - Math.PI : robot.Orientation + Math.PI
                     })
                 }
             };
