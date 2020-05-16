@@ -104,7 +104,7 @@ namespace Referee
                             var yellowCliEnvironment = ConvertToRight(EnvironmentSimToCli(environment, info));
                             var yellowClientCommandReply = yellowClient.RunStrategy(yellowCliEnvironment);
 
-                            simulationClient.Simulate(CommandCliToSim(blueClientCommandReply,
+                            environment = simulationClient.Simulate(CommandCliToSim(blueClientCommandReply,
                                 yellowClientCommandReply, isSecondHalf));
                             break;
                         }
@@ -196,7 +196,7 @@ namespace Referee
                                     throw new ArgumentOutOfRangeException();
                             }
 
-                            simulationClient.Simulate(MatchInfo2Packet(matchInfo, isSecondHalf));
+                            environment = simulationClient.Simulate(MatchInfo2Packet(matchInfo, isSecondHalf));
                             break;
                         }
                         default:
